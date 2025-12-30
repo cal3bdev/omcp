@@ -1,0 +1,68 @@
+[project]
+name = "omcp"
+version = "2.0.0"
+description = "OpenAPI to MCP - Convert OpenAPI specs into MCP servers for AI agents"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "OMCP Contributors" }]
+keywords = ["mcp", "openapi", "ai", "llm", "api"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "typer>=0.9.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "httpx>=0.27.0",
+    "fastmcp>=0.1.0",
+    "rich>=13.0.0",
+    "pyyaml>=6.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.1.0",
+    "mypy>=1.8.0",
+]
+demo = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.27.0",
+]
+openai = ["openai>=1.0.0"]
+anthropic = ["anthropic>=0.18.0"]
+gemini = ["google-generativeai>=0.8.0"]
+all = ["omcp[dev,demo,openai,anthropic,gemini]"]
+
+[project.scripts]
+omcp = "omcp.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/omcp"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true

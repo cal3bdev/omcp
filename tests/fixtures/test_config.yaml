@@ -1,0 +1,6 @@
+name: "Test API"
+spec: "./openapi.json"
+base_url: "https://api.example.com"
+auth:
+  type: bearer
+  token: "test-token"

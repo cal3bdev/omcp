@@ -1,0 +1,29 @@
+# OMCP Configuration - Include-only mode
+# Only expose specific endpoints using include patterns
+
+name: "Widget Store (Limited)"
+spec: "http://127.0.0.1:8001/openapi.json"
+base_url: "http://127.0.0.1:8001"
+
+auth:
+  type: none
+
+mode: single
+
+server:
+  transport: stdio
+  name: "widget-store-limited-mcp"
+
+# Only include specific endpoints (whitelist approach)
+endpoints:
+  include:
+    - "GET /widgets"         # List widgets
+    - "GET /widgets/*"       # Get single widget
+    - "POST /widgets"        # Create widget
+    - "GET /orders"          # List orders
+    - "POST /orders"         # Create order
+    - "GET /orders/*"        # Get single order
+    - "GET /health"          # Basic health check
+  exclude: []
+
+tools: {}

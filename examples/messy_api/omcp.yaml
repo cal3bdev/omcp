@@ -1,0 +1,33 @@
+# OMCP Configuration for Messy Widget Store API
+# This config demonstrates filtering out internal/debug/admin routes
+# and letting LLM improve the poor descriptions
+
+name: "Acme Widget Store"
+spec: "http://127.0.0.1:8001/openapi.json"
+base_url: "http://127.0.0.1:8001"
+
+auth:
+  type: none
+
+mode: single
+
+server:
+  transport: stdio
+  name: "widget-store-mcp"
+
+# Filter out internal, debug, admin, and legacy endpoints
+endpoints:
+  include: []
+  exclude:
+    - "* /debug/**"      # All debug endpoints
+    - "* /internal/**"   # All internal endpoints  
+    - "* /admin/**"      # All admin endpoints
+    - "* /v1/**"         # Legacy v1 API
+    - "* /api/**"        # Alternative legacy paths
+    - "GET /"            # Root endpoint (not useful as tool)
+    - "GET /docs-redirect"  # Documentation redirect
+    - "GET /health/detailed"  # Detailed health (internal)
+
+# Tool customizations - these would normally come from LLM
+# Leave empty to test LLM rewriting
+tools: {}

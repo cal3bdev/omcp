@@ -1,0 +1,180 @@
+{
+  "version": "2.0",
+  "api_name": "Acme Widget Store",
+  "base_url": "http://127.0.0.1:8001",
+  "policy": {
+    "block_methods": [],
+    "block_path_patterns": [
+      "/debug/**",
+      "/internal/**",
+      "/admin/**",
+      "/v1/**",
+      "/api/**",
+      "/",
+      "/docs-redirect",
+      "/health/detailed"
+    ],
+    "require_auth_for_writes": true
+  },
+  "modules": [
+    {
+      "name": "order_management",
+      "description": "Tools for managing customer orders, including listing, creating, getting details, and canceling orders.",
+      "policy_overrides": {}
+    },
+    {
+      "name": "review_management",
+      "description": "Tools for managing customer reviews, including listing and creating reviews.",
+      "policy_overrides": {}
+    },
+    {
+      "name": "widget_management",
+      "description": "Tools for managing widgets, including listing, creating, retrieving, updating, adjusting stock, and deleting widgets.",
+      "policy_overrides": {}
+    },
+    {
+      "name": "health",
+      "description": "Tools for checking the health of the service.",
+      "policy_overrides": {}
+    }
+  ],
+  "tools": [
+    {
+      "operation_id": "list_orders_orders_get",
+      "method": "GET",
+      "path": "/orders",
+      "tool_name": "list_orders",
+      "description": "List all orders.",
+      "expose": true,
+      "module": "order_management",
+      "safety_notes": []
+    },
+    {
+      "operation_id": "create_order_orders_post",
+      "method": "POST",
+      "path": "/orders",
+      "tool_name": "create_order",
+      "description": "Create a new order.",
+      "expose": true,
+      "module": "order_management",
+      "safety_notes": []
+    },
+    {
+      "operation_id": "get_order_orders__order_id__get",
+      "method": "GET",
+      "path": "/orders/{order_id}",
+      "tool_name": "get_order",
+      "description": "Get details of a specific order by its ID. Requires order_id.",
+      "expose": true,
+      "module": "order_management",
+      "safety_notes": []
+    },
+    {
+      "operation_id": "cancel_order_orders__order_id__cancel_post",
+      "method": "POST",
+      "path": "/orders/{order_id}/cancel",
+      "tool_name": "cancel_order",
+      "description": "Cancel an order by its ID. Requires order_id.",
+      "expose": true,
+      "module": "order_management",
+      "safety_notes": []
+    },
+    {
+      "operation_id": "get_reviews_reviews_get",
+      "method": "GET",
+      "path": "/reviews",
+      "tool_name": "list_reviews",
+      "description": "List all reviews.",
+      "expose": true,
+      "module": "review_management",
+      "safety_notes": []
+    },
+    {
+      "operation_id": "create_review_reviews_post",
+      "method": "POST",
+      "path": "/reviews",
+      "tool_name": "create_review",
+      "description": "Create a new review.",
+      "expose": true,
+      "module": "review_management",
+      "safety_notes": []
+    },
+    {
+      "operation_id": "get_widgets_widgets_get",
+      "method": "GET",
+      "path": "/widgets",
+      "tool_name": "list_widgets",
+      "description": "List all widgets.",
+      "expose": true,
+      "module": "widget_management",
+      "safety_notes": []
+    },
+    {
+      "operation_id": "create_widget_widgets_post",
+      "method": "POST",
+      "path": "/widgets",
+      "tool_name": "create_widget",
+      "description": "Create a new widget.",
+      "expose": true,
+      "module": "widget_management",
+      "safety_notes": []
+    },
+    {
+      "operation_id": "get_widget_widgets__widget_id__get",
+      "method": "GET",
+      "path": "/widgets/{widget_id}",
+      "tool_name": "get_widget",
+      "description": "Get details of a specific widget by its ID. Requires widget_id.",
+      "expose": true,
+      "module": "widget_management",
+      "safety_notes": []
+    },
+    {
+      "operation_id": "update_widget_widgets__widget_id__put",
+      "method": "PUT",
+      "path": "/widgets/{widget_id}",
+      "tool_name": "update_widget",
+      "description": "Update a widget by its ID. Requires widget_id.",
+      "expose": true,
+      "module": "widget_management",
+      "safety_notes": []
+    },
+    {
+      "operation_id": "delete_widget_widgets__widget_id__delete",
+      "method": "DELETE",
+      "path": "/widgets/{widget_id}",
+      "tool_name": "delete_widget",
+      "description": "Delete a widget by its ID. Requires widget_id.",
+      "expose": true,
+      "module": "widget_management",
+      "safety_notes": []
+    },
+    {
+      "operation_id": "adjust_stock_widgets__widget_id__stock_patch",
+      "method": "PATCH",
+      "path": "/widgets/{widget_id}/stock",
+      "tool_name": "adjust_widget_stock",
+      "description": "Adjust the stock level of a widget by its ID. Requires widget_id.",
+      "expose": true,
+      "module": "widget_management",
+      "safety_notes": []
+    },
+    {
+      "operation_id": "health_check_health_get",
+      "method": "GET",
+      "path": "/health",
+      "tool_name": "check_health",
+      "description": "Check the health status of the service.",
+      "expose": true,
+      "module": "health",
+      "safety_notes": []
+    }
+  ],
+  "provenance": {
+    "planner_model": "gemini-2.0-flash",
+    "planner_provider": "gemini",
+    "generated_at": "2025-12-30T16:16:46.449334Z",
+    "spec_hash": "fec5d3cd2092aebd",
+    "config_hash": ""
+  }
+}

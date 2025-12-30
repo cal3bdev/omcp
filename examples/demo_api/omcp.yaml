@@ -1,0 +1,23 @@
+# OMCP Configuration for Task Manager API Demo
+
+name: "Task Manager"
+spec: "http://127.0.0.1:8000/openapi.json"
+base_url: "http://127.0.0.1:8000"
+
+
+# No auth needed for this demo
+auth:
+  type: none
+
+# Single server mode for simplicity
+mode: single
+
+# Server settings
+server:
+  transport: stdio
+  name: "task-manager-mcp"
+
+# Endpoint filtering (optional - expose everything for demo)
+endpoints:
+  include: []
+  exclude: []

@@ -1,0 +1,62 @@
+# OMCP Configuration for testing LLM rewriting
+# Uses the messy API with poor descriptions to test LLM improvement
+
+name: "Acme Widget Store"
+spec: "http://127.0.0.1:8001/openapi.json"
+base_url: "http://127.0.0.1:8001"
+
+auth:
+  type: none
+
+mode: single
+
+server:
+  transport: stdio
+  name: "widget-store-mcp"
+
+# Filter out internal, debug, admin, and legacy endpoints
+endpoints:
+  include: []
+  exclude:
+    - "* /debug/**"
+    - "* /internal/**"
+    - "* /admin/**"
+    - "* /v1/**"
+    - "* /api/**"
+    - "GET /"
+    - "GET /docs-redirect"
+    - "GET /health/detailed"
+
+# Enable LLM planner for description rewriting
+llm:
+  enabled: true
+  provider: gemini
+  model: gemini-2.0-flash
+  api_key: "${GEMINI_API_KEY}"
+  temperature: 0.1
+  max_tokens: 8000
+  
+  strategy:
+    max_tools_total: 50
+    target_tools_per_module: 15
+    naming:
+      style: verb_noun
+      max_name_length: 40
+    policy:
+      block_methods: []
+      block_path_globs:
+        - "/debug/**"
+        - "/internal/**"
+        - "/admin/**"
+        - "/v1/**"
+        - "/api/**"
+        - "/"
+        - "/docs-redirect"
+        - "/health/detailed"
+  
+  output:
+    plan_path: "./omcp.plan.json"
+    save_normalized_spec: true
+    normalized_spec_path: "./.omcp/spec.normalized.json"
+
+tools: {}
