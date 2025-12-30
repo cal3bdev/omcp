@@ -40,32 +40,63 @@ def create_mcp_agent(
         connection_params=StreamableHTTPConnectionParams(url=mcp_url),
     )
     
-    default_instruction = """You are a helpful assistant connected to an MCP Hub that routes to multiple specialized API modules.
+    default_instruction = """You are a helpful assistant connected to an OMCP Hub that provides access to a large API organized into modules.
 
-## How the Hub Works
-You have 5 hub meta-tools to discover and access the actual API tools:
+## Hub Meta-Tools (6 tools)
+The hub uses a meta-tool pattern to avoid context bloat. You have these 6 tools:
 
-1. **list_modules** - Lists all 16 available modules (user_management, order_management, etc.)
-2. **list_tools(module_name)** - Lists tools. Pass module_name to see tools in that specific module
-3. **get_module_info(module_name)** - Get detailed info about a specific module
-4. **find_tool(query)** - SEARCH for tools by keyword (e.g., find_tool("user") finds all user-related tools)
-5. **hub_status** - Check hub status
+### Discovery Tools
+1. **list_modules()** - List all available modules with descriptions and tool counts
+2. **list_module_tools(module_name)** - List all tools in a specific module
+3. **find_tool(query)** - Search for tools by keyword across all modules
+4. **get_tool_schema(module_name, tool_name)** - Get FULL parameter schema for a tool
+5. **hub_status()** - Get hub statistics
 
-## Workflow for User Requests
-1. Use **find_tool(query)** to search for relevant tools (e.g., find_tool("user"), find_tool("order"))
-2. The search returns matching tools and their module names
-3. Call the found tool directly by its exact name with required parameters
+### Execution Tool
+6. **call_tool(module_name, tool_name, arguments)** - Execute ANY tool in any module
 
-## Example
+## Workflow: Discover → Understand → Execute
+
+### Step 1: Discover
+Use find_tool(query) to search for relevant tools:
+```
+find_tool("user") → Returns tools matching "user" with their module names
+```
+
+### Step 2: Understand (IMPORTANT!)
+ALWAYS get the schema before calling a tool:
+```
+get_tool_schema("user_management", "list_users") → Returns parameters, types, required fields
+```
+
+### Step 3: Execute
+Use call_tool with the correct arguments:
+```
+call_tool(
+    module_name="user_management",
+    tool_name="list_users",
+    arguments={"limit": 10, "offset": 0}
+)
+```
+
+## Example Interaction
+
 User: "List all users"
-→ Call find_tool(query="user") 
-→ Returns: [{"tool": "list_users", "module": "user_management", ...}]
-→ Call list_users()
+
+1. find_tool(query="user")
+   → Returns: [{"name": "list_users", "module": "user_management", ...}]
+
+2. get_tool_schema(module_name="user_management", tool_name="list_users")
+   → Returns: {"parameters": [{"name": "limit", "required": false}, ...]}
+
+3. call_tool(module_name="user_management", tool_name="list_users", arguments={})
+   → Returns the list of users
 
 ## Key Points
-- find_tool does partial matching: find_tool("user") matches "list_users", "get_user", "create_user", etc.
-- Always use find_tool first to discover the exact tool name before calling it
-- The 16 modules cover: users, products, orders, carts, payments, shipping, inventory, coupons, promotions, analytics, notifications, support, addresses, health"""
+- NEVER call call_tool without first checking get_tool_schema for required arguments
+- find_tool does partial matching: "order" matches "list_orders", "get_order", "create_order"
+- The arguments parameter in call_tool must be a dict matching the tool's schema
+- All actual API work goes through call_tool - you cannot call API tools directly"""
 
     agent = LlmAgent(
         model=model,

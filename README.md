@@ -172,6 +172,105 @@ omcp plan -c omcp.yaml
 
 **Note:** User-defined endpoint filters (`endpoints.exclude`) are applied **before** sending to the LLM. Your exclusions are the "hard rule" - the LLM only sees and processes the endpoints you've allowed.
 
+## Modular Mode (Hub)
+
+For large APIs with many endpoints, modular mode splits the API into multiple micro-MCP servers coordinated by a hub. This prevents context window bloat by exposing only 6 meta-tools instead of 100+ individual tools.
+
+### Configuration
+
+```yaml
+name: "Large API"
+spec: "http://api.example.com/openapi.json"
+base_url: "http://api.example.com"
+
+mode: modular  # Enable modular mode
+
+modules:
+  strategy: llm  # or: tags, path, hybrid
+  base_port: 9100
+  host: "127.0.0.1"
+
+hub:
+  enabled: true
+  port: 9000
+  transport: http  # or: sse, stdio
+```
+
+### Hub Meta-Tools
+
+The hub exposes 6 meta-tools for discovering and executing module tools:
+
+| Tool | Description |
+|------|-------------|
+| `list_modules()` | List all modules with descriptions and tool counts |
+| `list_module_tools(module_name)` | List tools in a specific module |
+| `find_tool(query)` | Search for tools by keyword |
+| `get_tool_schema(module_name, tool_name)` | Get full parameter schema |
+| `hub_status()` | Get hub statistics |
+| `call_tool(module_name, tool_name, arguments)` | Execute any tool |
+
+### Agent Prompt Instructions
+
+When using hub mode, your AI agent needs instructions on how to use the meta-tool pattern. Add the following to your agent's system prompt:
+
+```
+You are connected to an OMCP Hub that provides access to a large API organized into modules.
+
+## Hub Meta-Tools
+The hub uses a meta-tool pattern. You have these 6 tools:
+
+### Discovery Tools
+1. **list_modules()** - List all available modules with descriptions and tool counts
+2. **list_module_tools(module_name)** - List all tools in a specific module
+3. **find_tool(query)** - Search for tools by keyword across all modules
+4. **get_tool_schema(module_name, tool_name)** - Get FULL parameter schema for a tool
+5. **hub_status()** - Get hub statistics
+
+### Execution Tool
+6. **call_tool(module_name, tool_name, arguments)** - Execute ANY tool in any module
+
+## Workflow: Discover → Understand → Execute
+
+### Step 1: Discover
+Use find_tool(query) to search for relevant tools:
+  find_tool("user") → Returns tools matching "user" with their module names
+
+### Step 2: Understand (IMPORTANT!)
+ALWAYS get the schema before calling a tool:
+  get_tool_schema("user_management", "list_users") → Returns parameters, types, required fields
+
+### Step 3: Execute
+Use call_tool with the correct arguments:
+  call_tool(
+      module_name="user_management",
+      tool_name="list_users",
+      arguments={"limit": 10}
+  )
+
+## Key Points
+- NEVER call call_tool without first checking get_tool_schema for required arguments
+- find_tool does partial matching: "order" matches "list_orders", "get_order", "create_order"
+- The arguments parameter in call_tool must be a dict matching the tool's schema
+- All actual API work goes through call_tool - you cannot call API tools directly
+```
+
+### Running Hub Mode
+
+```bash
+# Start the hub and module servers
+omcp serve -c omcp.yaml
+
+# Output:
+# > Mode: modular
+# > Starting 16 module servers...
+# > Module user_management ready at http://127.0.0.1:9100/mcp
+# > Module orders ready at http://127.0.0.1:9101/mcp
+# > ...
+# > Hub ready at http://127.0.0.1:9000/mcp
+```
+
+Connect your agent to `http://localhost:9000/mcp` (the hub), not the individual module servers.
+
 ## Authentication
 
 ### Bearer Token

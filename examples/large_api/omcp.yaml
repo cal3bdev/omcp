@@ -1,5 +1,5 @@
 # OMCP Configuration for Large E-Commerce API
-# Tests modular mode with micro-MCPs and hub router
+# Modular mode with LLM-based module splitting (not tags)
 
 name: "MegaStore E-Commerce"
 spec: "http://127.0.0.1:8002/openapi.json"
@@ -8,12 +8,14 @@ base_url: "http://127.0.0.1:8002"
 auth:
   type: none
 
-# MODULAR MODE - splits API into multiple micro-MCPs
+# MODULAR MODE - splits API into multiple micro-MCPs using LLM grouping
 mode: modular
 
 server:
-  transport: stdio
+  transport: http
   name: "megastore-mcp"
+  host: "127.0.0.1"
+  port: 9000
 
 # Exclude internal/health endpoints
 endpoints:
@@ -21,10 +23,10 @@ endpoints:
   exclude:
     - "GET /health/detailed"
 
-# Module configuration
+# Module configuration - LLM strategy uses omcp.plan.json
 modules:
   enabled: true
-  split_strategy: llm  # Use LLM to intelligently group endpoints
+  split_strategy: llm  # Use LLM-generated plan (not tags)
   allow: ["*"]
   deny: []
   runtime:
@@ -36,7 +38,7 @@ modules:
 hub:
   enabled: true
   name: "MegaStore Hub"
-  transport: stdio  # Main entry point via stdio
+  transport: http  # HTTP for client connections
   host: "127.0.0.1"
   port: 9000
   routing:

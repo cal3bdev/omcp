@@ -147,23 +147,27 @@ def _serve_modular(cfg, plan_file: Path | None) -> None:
 
     # Check if hub is enabled
     if cfg.hub.enabled:
-        # Run modules and hub together
-        asyncio.run(_run_modules_and_hub(cfg, module_runner))
+        # Run modules and hub together (pass spec and plan for tool schemas)
+        asyncio.run(_run_modules_and_hub(cfg, module_runner, spec, plan))
     else:
         # Just run modules
         module_runner.run()
 
 
-async def _run_modules_and_hub(cfg, module_runner) -> None:
-    """Run modules and hub together."""
+async def _run_modules_and_hub(cfg, module_runner, spec, plan) -> None:
+    """Run modules and hub together using ThreadPoolExecutor.
+
+    Args:
+        cfg: OMCP configuration
+        module_runner: ModuleRunner instance with modules to start
+        spec: Normalized OpenAPI spec (for tool schemas)
+        plan: OMCP plan (for tool names and descriptions)
+    """
     import asyncio
     import signal
     from concurrent.futures import ThreadPoolExecutor
 
     from omcp.hub import HubRunner, create_hub_registry_from_modules
-
-    # Start modules first (they need to be running for hub to connect)
-    # We'll run them in background and start hub after a brief delay
 
     shutdown_event = asyncio.Event()
     loop = asyncio.get_running_loop()
@@ -177,62 +181,73 @@ async def _run_modules_and_hub(cfg, module_runner) -> None:
     executor = ThreadPoolExecutor(max_workers=len(module_runner.split_result.modules) + 1)
 
     try:
-        # Build modules and get registry
-        modules = module_runner.split_result.modules
+        # Build all module servers
+        module_runner.build_all()
+
+        # Start each module server in thread pool
         transport = cfg.modules.runtime.transport
         if transport == "http":
             transport = "streamable-http"
         host = cfg.modules.runtime.host
 
-        module_tasks = []
-        for index, module in enumerate(modules):
+        futures = []
+        for index, (name, builder) in enumerate(module_runner._builders.items()):
             port = module_runner._get_module_port(index)
             url = module_runner._get_module_url(port)
-
-            builder = module_runner._build_module(module)
             mcp = builder.build()
 
-            # Register in module runner's registry
-            from omcp.modules.runner import ModuleInstance
+            # Get tool names from builder
+            tool_names = builder.get_tool_names()
 
+            # Register instance
+            from omcp.modules.runner import ModuleInstance
             instance = ModuleInstance(
-                name=module.name,
+                name=name,
                 port=port,
                 url=url,
                 mcp=mcp,
-                tool_count=len(module.operations),
+                tool_count=len(builder.module.operations),
+                tools=tool_names,
             )
             module_runner.registry.register(instance)
 
-            print_success(f"  {module.name}: {url} ({len(module.operations)} tools)")
-
-            # Start module in executor
-            task = loop.run_in_executor(
+            # Start in executor
+            future = loop.run_in_executor(
                 executor,
-                lambda m=mcp, h=host, p=port, t=transport: m.run(transport=t, host=h, port=p),
+                lambda m=mcp, t=transport, h=host, p=port: m.run(transport=t, host=h, port=p)
             )
-            module_tasks.append(task)
+            futures.append(future)
+
+            print_success(f"  {name}: {url} ({len(builder.module.operations)} tools)")
 
         # Brief delay to let modules start
         await asyncio.sleep(0.5)
 
-        # Create hub registry from module registry
-        hub_registry = create_hub_registry_from_modules(module_runner.registry)
-        print_info(f"Hub registry: {len(hub_registry)} modules registered")
+        # Create hub registry from module registry with full tool schemas
+        hub_registry = create_hub_registry_from_modules(
+            module_runner.registry,
+            spec=spec,
+            plan=plan,
+        )
+        print_info(f"Hub registry: {len(hub_registry)} modules, {len(hub_registry.list_tools())} tools")
 
         # Start hub
         hub_runner = HubRunner(hub_registry, cfg.hub)
+        print_info("Starting Hub: " + cfg.hub.name)
+        print_info(f"Transport: {cfg.hub.transport}")
         print_success(f"Hub ready at http://{cfg.hub.host}:{cfg.hub.port}")
-
-        hub_task = loop.run_in_executor(executor, hub_runner.run)
-
         print_info("All services started. Press Ctrl+C to stop.")
+
+        # Run hub in executor
+        hub_future = loop.run_in_executor(executor, hub_runner.run)
+        futures.append(hub_future)
 
         # Wait for shutdown
         await shutdown_event.wait()
 
     finally:
-        executor.shutdown(wait=False)
+        executor.shutdown(wait=False, cancel_futures=True)
+
         for sig in (signal.SIGINT, signal.SIGTERM):
             try:
                 loop.remove_signal_handler(sig)

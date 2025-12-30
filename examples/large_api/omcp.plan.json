@@ -67,17 +67,17 @@
     },
     {
       "name": "promotion_management",
-      "description": "Tools for managing promotions, including listing promotions, retrieving promotion details, and listing products associated with a promotion.",
+      "description": "Tools for managing promotions, including listing promotions, getting promotion details, and getting products associated with a promotion.",
       "policy_overrides": {}
     },
     {
       "name": "shipping_management",
-      "description": "Tools for managing shipments, including creating shipments, generating labels, updating shipment status, tracking shipments, listing carriers, estimating delivery, getting shipping rates, and validating addresses.",
+      "description": "Tools for managing shipments, including listing, creating, and getting shipment details, generating shipping labels, updating shipment status, getting shipment tracking information, and managing shipping carriers and rates.",
       "policy_overrides": {}
     },
     {
-      "name": "support_operations",
-      "description": "Tools for accessing support information, including contact details, FAQs, and support tickets.",
+      "name": "customer_support",
+      "description": "Tools for providing customer support, including getting contact information, listing FAQs, and listing support tickets.",
       "policy_overrides": {}
     },
     {
@@ -287,7 +287,7 @@
       "method": "GET",
       "path": "/cart/{user_id}/summary",
       "tool_name": "get_cart_summary",
-      "description": "Get a summary of the cart for a specific user.",
+      "description": "Get a summary of a user's cart.",
       "expose": true,
       "module": "cart_management",
       "safety_notes": []
@@ -487,7 +487,7 @@
       "method": "POST",
       "path": "/notifications/{user_id}",
       "tool_name": "create_notification",
-      "description": "Create a new notification for a user by user ID.",
+      "description": "Create a new notification for a specific user by user ID.",
       "expose": true,
       "module": "notification_management",
       "safety_notes": []
@@ -497,7 +497,7 @@
       "method": "POST",
       "path": "/notifications/{user_id}/mark-all-read",
       "tool_name": "mark_all_read",
-      "description": "Mark all notifications as read for a user by user ID.",
+      "description": "Mark all notifications as read for a specific user by user ID.",
       "expose": true,
       "module": "notification_management",
       "safety_notes": []
@@ -507,7 +507,7 @@
       "method": "DELETE",
       "path": "/notifications/{user_id}/{notification_id}",
       "tool_name": "delete_notification",
-      "description": "Delete a specific notification by user ID and notification ID.",
+      "description": "Delete a specific notification for a user by user ID and notification ID.",
       "expose": true,
       "module": "notification_management",
       "safety_notes": []
@@ -517,7 +517,7 @@
       "method": "PUT",
       "path": "/notifications/{user_id}/{notification_id}/read",
       "tool_name": "mark_notification_read",
-      "description": "Mark a specific notification as read by user ID and notification ID.",
+      "description": "Mark a specific notification as read for a user by user ID and notification ID.",
       "expose": true,
       "module": "notification_management",
       "safety_notes": []
@@ -557,7 +557,7 @@
       "method": "POST",
       "path": "/orders/{order_id}/cancel",
       "tool_name": "cancel_order",
-      "description": "Cancel an order by order ID.",
+      "description": "Cancel a specific order by order ID.",
       "expose": true,
       "module": "order_management",
       "safety_notes": []
@@ -587,7 +587,7 @@
       "method": "GET",
       "path": "/orders/{order_id}/payment",
       "tool_name": "get_order_payment",
-      "description": "Get payment details for a specific order by order ID.",
+      "description": "Get payment information for a specific order by order ID.",
       "expose": true,
       "module": "order_management",
       "safety_notes": []
@@ -597,7 +597,7 @@
       "method": "POST",
       "path": "/orders/{order_id}/refund",
       "tool_name": "refund_order",
-      "description": "Refund an order by order ID.",
+      "description": "Refund a specific order by order ID.",
       "expose": true,
       "module": "order_management",
       "safety_notes": []
@@ -607,7 +607,7 @@
       "method": "POST",
       "path": "/orders/{order_id}/reorder",
       "tool_name": "reorder",
-      "description": "Reorder a previous order by order ID.",
+      "description": "Reorder a specific order by order ID.",
       "expose": true,
       "module": "order_management",
       "safety_notes": []
@@ -627,7 +627,7 @@
       "method": "PUT",
       "path": "/orders/{order_id}/status",
       "tool_name": "update_order_status",
-      "description": "Update the status of an order by order ID.",
+      "description": "Update the status of a specific order by order ID.",
       "expose": true,
       "module": "order_management",
       "safety_notes": []
@@ -801,7 +801,7 @@
       "expose": true,
       "module": "product_management",
       "safety_notes": [
-        "This operation permanently deletes a product."
+        "Potentially dangerous operation: Deletes product data."
       ]
     },
     {
@@ -809,7 +809,7 @@
       "method": "GET",
       "path": "/products/{product_id}/related",
       "tool_name": "get_related_products",
-      "description": "Get related products for a given product ID.",
+      "description": "Get a list of related products for a given product ID.",
       "expose": true,
       "module": "product_management",
       "safety_notes": []
@@ -939,7 +939,7 @@
       "method": "GET",
       "path": "/shipping/estimate",
       "tool_name": "estimate_delivery",
-      "description": "Estimate delivery time based on provided parameters.",
+      "description": "Estimate delivery time based on shipping parameters.",
       "expose": true,
       "module": "shipping_management",
       "safety_notes": []
@@ -949,7 +949,7 @@
       "method": "GET",
       "path": "/shipping/rates",
       "tool_name": "get_shipping_rates",
-      "description": "Get shipping rates based on provided parameters.",
+      "description": "Get shipping rates based on shipping parameters.",
       "expose": true,
       "module": "shipping_management",
       "safety_notes": []
@@ -969,9 +969,9 @@
       "method": "GET",
       "path": "/support/contact",
       "tool_name": "get_contact_info",
-      "description": "Get contact information for support.",
+      "description": "Get contact information for customer support.",
       "expose": true,
-      "module": "support_operations",
+      "module": "customer_support",
       "safety_notes": []
     },
     {
@@ -981,7 +981,7 @@
       "tool_name": "list_faq",
       "description": "List frequently asked questions.",
       "expose": true,
-      "module": "support_operations",
+      "module": "customer_support",
       "safety_notes": []
     },
     {
@@ -991,7 +991,7 @@
       "tool_name": "list_tickets",
       "description": "List support tickets.",
       "expose": true,
-      "module": "support_operations",
+      "module": "customer_support",
       "safety_notes": []
     },
     {
@@ -1148,7 +1148,7 @@
   "provenance": {
     "planner_model": "gemini-2.0-flash",
     "planner_provider": "gemini",
-    "generated_at": "2025-12-30T16:53:39.047915Z",
+    "generated_at": "2025-12-30T17:28:16.518340Z",
     "spec_hash": "07cdcb8c92a551bd",
     "config_hash": ""
   }

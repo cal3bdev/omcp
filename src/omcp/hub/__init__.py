@@ -1,7 +1,7 @@
 """Hub server for module discovery and routing."""
 
 from omcp.hub.builder import HubBuilder, build_hub
-from omcp.hub.registry import HubRegistry, RegisteredModule
+from omcp.hub.registry import HubRegistry, RegisteredModule, ToolSchema
 from omcp.hub.router import HubRouter, HubRoutingError, RouteResult, RoutingMode
 from omcp.hub.runner import (
     HubRunner,
@@ -13,6 +13,7 @@ __all__ = [
     # Registry
     "HubRegistry",
     "RegisteredModule",
+    "ToolSchema",
     # Router
     "HubRouter",
     "HubRoutingError",

@@ -26,8 +26,9 @@ class ModuleInstance:
     name: str
     port: int
     url: str
-    mcp: FastMCP
+    mcp: FastMCP | None  # None when running in subprocess mode
     tool_count: int
+    tools: list[str] = field(default_factory=list)  # Tool names for hub registry
 
 
 @dataclass
@@ -166,6 +167,14 @@ class ModuleRunner:
             )
         return self._builders[module.name]
 
+    def build_all(self) -> None:
+        """Build all module servers without starting them.
+        
+        This pre-builds all ModuleBuilder instances for later use.
+        """
+        for module in self.split_result.modules:
+            self._build_module(module)
+
     def _run_module_sync(
         self,
         mcp: FastMCP,
@@ -232,6 +241,7 @@ class ModuleRunner:
                     url=url,
                     mcp=mcp,
                     tool_count=len(module.operations),
+                    tools=builder.get_tool_names(),
                 )
                 self._registry.register(instance)
 

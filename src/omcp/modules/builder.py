@@ -128,6 +128,16 @@ class ModuleBuilder:
             return None
         return self.module.tool_names
 
+    def get_tool_names(self) -> list[str]:
+        """Get the list of tool names this module will expose.
+
+        Returns:
+            List of tool names (using plan names if available, else operation IDs)
+        """
+        if self.module.tool_names:
+            return list(self.module.tool_names.values())
+        return [op.operation_id for op in self.module.operations]
+
     def build(self) -> FastMCP:
         """Build the FastMCP server for this module.
 
@@ -136,12 +146,6 @@ class ModuleBuilder:
         """
         if self._mcp is not None:
             return self._mcp
-
-        # Create module name for server
-        server_name = f"{self.config.name}:{self.module.name}"
-
-        # Create the FastMCP server
-        mcp = FastMCP(name=server_name)
 
         # Create filtered spec for this module
         module_spec = self._create_module_spec()
@@ -155,12 +159,16 @@ class ModuleBuilder:
         # Get tool name overrides
         mcp_names = self._create_mcp_names()
 
-        # Build the server from OpenAPI
-        mcp.from_openapi(
+        # Create module name for server
+        server_name = f"{self.config.name}:{self.module.name}"
+
+        # Build the server from OpenAPI - from_openapi is a classmethod that returns a new instance!
+        mcp = FastMCP.from_openapi(
             openapi_spec=module_spec,
             client=http_client,
             mcp_component_fn=component_fn,
             mcp_names=mcp_names,
+            name=server_name,
         )
 
         self._mcp = mcp
