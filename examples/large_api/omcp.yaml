@@ -1,0 +1,74 @@
+# OMCP Configuration for Large E-Commerce API
+# Tests modular mode with micro-MCPs and hub router
+
+name: "MegaStore E-Commerce"
+spec: "http://127.0.0.1:8002/openapi.json"
+base_url: "http://127.0.0.1:8002"
+
+auth:
+  type: none
+
+# MODULAR MODE - splits API into multiple micro-MCPs
+mode: modular
+
+server:
+  transport: stdio
+  name: "megastore-mcp"
+
+# Exclude internal/health endpoints
+endpoints:
+  include: []
+  exclude:
+    - "GET /health/detailed"
+
+# Module configuration
+modules:
+  enabled: true
+  split_strategy: llm  # Use LLM to intelligently group endpoints
+  allow: ["*"]
+  deny: []
+  runtime:
+    base_port: 9100
+    host: "127.0.0.1"
+    transport: http
+
+# Hub configuration - aggregates all modules
+hub:
+  enabled: true
+  name: "MegaStore Hub"
+  transport: stdio  # Main entry point via stdio
+  host: "127.0.0.1"
+  port: 9000
+  routing:
+    mode: tool_to_module
+    enforce_policy: true
+  discovery:
+    expose_registry_tool: true
+    expose_module_docs_resource: true
+
+# LLM planner for intelligent module splitting
+llm:
+  enabled: true
+  provider: gemini
+  model: gemini-2.0-flash
+  api_key: "${GEMINI_API_KEY}"
+  temperature: 0.1
+  max_tokens: 32000
+  
+  strategy:
+    max_tools_total: 150
+    target_tools_per_module: 20  # ~5-6 modules
+    naming:
+      style: verb_noun
+      max_name_length: 40
+    policy:
+      block_methods: []
+      block_path_globs:
+        - "/health/detailed"
+  
+  output:
+    plan_path: "./omcp.plan.json"
+    save_normalized_spec: true
+    normalized_spec_path: "./.omcp/spec.normalized.json"
+
+tools: {}

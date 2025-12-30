@@ -6,6 +6,10 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
+from dotenv import load_dotenv
+
+# Load .env file from current directory and parent directories
+load_dotenv()
 
 from omcp import __version__
 from omcp.config import load_config
@@ -98,7 +102,6 @@ def _serve_modular(cfg, plan_file: Path | None) -> None:
     """Run modular server mode with multiple micro-MCPs and optional hub."""
     import asyncio
     import json
-    from concurrent.futures import ThreadPoolExecutor
 
     from omcp.hub import HubRunner, create_hub_registry_from_modules
     from omcp.modules import ModuleRunner
@@ -153,6 +156,7 @@ def _serve_modular(cfg, plan_file: Path | None) -> None:
 
 async def _run_modules_and_hub(cfg, module_runner) -> None:
     """Run modules and hub together."""
+    import asyncio
     import signal
     from concurrent.futures import ThreadPoolExecutor
 
