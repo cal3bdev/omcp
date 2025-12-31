@@ -299,19 +299,40 @@ class HubRegistry:
     def search_tools(self, query: str) -> list[ToolSchema]:
         """Search for tools by name or description.
 
+        Uses word-based matching: if ANY word in the query appears in the
+        tool name or description, it's considered a match. This allows
+        queries like "record payment" to find "create_payment".
+
         Args:
-            query: Search query (case-insensitive)
+            query: Search query (case-insensitive, space or underscore separated)
 
         Returns:
-            List of matching ToolSchema objects
+            List of matching ToolSchema objects, sorted by relevance (more word matches first)
         """
-        query_lower = query.lower().replace(" ", "_")
-        results = []
+        # Split query into individual words
+        query_lower = query.lower()
+        # Handle both spaces and underscores as word separators
+        words = [w.strip() for w in query_lower.replace("_", " ").split() if w.strip()]
+
+        if not words:
+            return []
+
+        results_with_scores: list[tuple[int, ToolSchema]] = []
         for schema in self._tool_schemas.values():
-            if (query_lower in schema.name.lower() or
-                query_lower in schema.description.lower()):
-                results.append(schema)
-        return results
+            # Normalize tool name and description for matching
+            name_lower = schema.name.lower().replace("_", " ")
+            desc_lower = schema.description.lower()
+            searchable = f"{name_lower} {desc_lower}"
+
+            # Count how many query words match
+            match_count = sum(1 for word in words if word in searchable)
+
+            if match_count > 0:
+                results_with_scores.append((match_count, schema))
+
+        # Sort by match count (descending) for relevance ranking
+        results_with_scores.sort(key=lambda x: x[0], reverse=True)
+        return [schema for _, schema in results_with_scores]
 
     def get_registry_info(self) -> dict[str, Any]:
         """Get complete registry information.
