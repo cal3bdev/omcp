@@ -37,6 +37,164 @@ support_tickets_db: dict[str, dict] = {}
 analytics_db: dict[str, dict] = {}
 
 
+def seed_data():
+    """Populate databases with realistic test data."""
+    now = datetime.now().isoformat()
+
+    # --- Categories ---
+    categories = [
+        {"id": "cat_electronics", "name": "Electronics", "parent_id": None},
+        {"id": "cat_phones", "name": "Smartphones", "parent_id": "cat_electronics"},
+        {"id": "cat_laptops", "name": "Laptops", "parent_id": "cat_electronics"},
+        {"id": "cat_clothing", "name": "Clothing", "parent_id": None},
+        {"id": "cat_mens", "name": "Men's Apparel", "parent_id": "cat_clothing"},
+        {"id": "cat_womens", "name": "Women's Apparel", "parent_id": "cat_clothing"},
+        {"id": "cat_home", "name": "Home & Garden", "parent_id": None},
+        {"id": "cat_furniture", "name": "Furniture", "parent_id": "cat_home"},
+        {"id": "cat_sports", "name": "Sports & Outdoors", "parent_id": None},
+    ]
+    for cat in categories:
+        categories_db[cat["id"]] = cat
+
+    # --- Products ---
+    products = [
+        # Electronics - Phones
+        {"id": "prod_iphone15", "name": "iPhone 15 Pro", "description": "Latest Apple smartphone with A17 chip", "price": 999.99, "category_id": "cat_phones", "sku": "APPL-IP15-PRO", "created_at": now},
+        {"id": "prod_samsung24", "name": "Samsung Galaxy S24 Ultra", "description": "Premium Android phone with S-Pen", "price": 1199.99, "category_id": "cat_phones", "sku": "SAMS-S24-ULT", "created_at": now},
+        {"id": "prod_pixel8", "name": "Google Pixel 8", "description": "Pure Android experience with AI features", "price": 699.99, "category_id": "cat_phones", "sku": "GOOG-PX8-STD", "created_at": now},
+        # Electronics - Laptops
+        {"id": "prod_macbook", "name": "MacBook Pro 16\"", "description": "M3 Max chip, 36GB RAM, 1TB SSD", "price": 3499.99, "category_id": "cat_laptops", "sku": "APPL-MBP16-M3", "created_at": now},
+        {"id": "prod_thinkpad", "name": "ThinkPad X1 Carbon", "description": "Business ultrabook, Intel i7, 32GB RAM", "price": 1899.99, "category_id": "cat_laptops", "sku": "LNVO-X1C-G11", "created_at": now},
+        {"id": "prod_xps15", "name": "Dell XPS 15", "description": "Premium Windows laptop with OLED display", "price": 1799.99, "category_id": "cat_laptops", "sku": "DELL-XPS15-24", "created_at": now},
+        # Clothing - Men's
+        {"id": "prod_tshirt_m", "name": "Classic Cotton T-Shirt", "description": "100% organic cotton, multiple colors", "price": 29.99, "category_id": "cat_mens", "sku": "CLO-TSH-M-001", "created_at": now},
+        {"id": "prod_jeans_m", "name": "Slim Fit Denim Jeans", "description": "Stretch denim, dark wash", "price": 79.99, "category_id": "cat_mens", "sku": "CLO-JNS-M-001", "created_at": now},
+        {"id": "prod_jacket_m", "name": "Leather Bomber Jacket", "description": "Genuine leather, quilted lining", "price": 299.99, "category_id": "cat_mens", "sku": "CLO-JKT-M-001", "created_at": now},
+        # Clothing - Women's
+        {"id": "prod_dress_w", "name": "Summer Floral Dress", "description": "Lightweight midi dress, floral print", "price": 89.99, "category_id": "cat_womens", "sku": "CLO-DRS-W-001", "created_at": now},
+        {"id": "prod_blazer_w", "name": "Professional Blazer", "description": "Tailored fit, perfect for office", "price": 149.99, "category_id": "cat_womens", "sku": "CLO-BLZ-W-001", "created_at": now},
+        # Home & Garden
+        {"id": "prod_sofa", "name": "Modern 3-Seater Sofa", "description": "Velvet upholstery, solid wood frame", "price": 1299.99, "category_id": "cat_furniture", "sku": "HOM-SOF-3S-01", "created_at": now},
+        {"id": "prod_desk", "name": "Standing Desk Pro", "description": "Electric height adjustable, 60\" wide", "price": 599.99, "category_id": "cat_furniture", "sku": "HOM-DSK-STD-1", "created_at": now},
+        {"id": "prod_chair", "name": "Ergonomic Office Chair", "description": "Mesh back, lumbar support, adjustable", "price": 449.99, "category_id": "cat_furniture", "sku": "HOM-CHR-ERG-1", "created_at": now},
+        # Sports
+        {"id": "prod_bike", "name": "Mountain Bike Pro", "description": "27.5\" wheels, 21-speed, aluminum frame", "price": 899.99, "category_id": "cat_sports", "sku": "SPT-BIK-MTN-1", "created_at": now},
+        {"id": "prod_treadmill", "name": "Smart Treadmill", "description": "Foldable, 12 incline levels, HD screen", "price": 1499.99, "category_id": "cat_sports", "sku": "SPT-TRD-SMT-1", "created_at": now},
+        {"id": "prod_yoga", "name": "Premium Yoga Mat", "description": "6mm thick, non-slip, eco-friendly", "price": 49.99, "category_id": "cat_sports", "sku": "SPT-YGA-MAT-1", "created_at": now},
+    ]
+    for prod in products:
+        products_db[prod["id"]] = prod
+        # Also add inventory
+        inventory_db[prod["id"]] = {"product_id": prod["id"], "quantity": 100, "warehouse": "WH-001", "updated_at": now}
+
+    # --- Users ---
+    users = [
+        {"id": "user_alice", "email": "alice.johnson@email.com", "name": "Alice Johnson", "phone": "+1-555-0101", "created_at": now},
+        {"id": "user_bob", "email": "bob.smith@email.com", "name": "Bob Smith", "phone": "+1-555-0102", "created_at": now},
+        {"id": "user_carol", "email": "carol.white@email.com", "name": "Carol White", "phone": "+1-555-0103", "created_at": now},
+        {"id": "user_david", "email": "david.brown@email.com", "name": "David Brown", "phone": "+1-555-0104", "created_at": now},
+        {"id": "user_emma", "email": "emma.davis@email.com", "name": "Emma Davis", "phone": "+1-555-0105", "created_at": now},
+    ]
+    for user in users:
+        users_db[user["id"]] = user
+
+    # --- Addresses ---
+    addresses = [
+        {"id": "addr_alice_1", "user_id": "user_alice", "street": "123 Oak Street", "city": "San Francisco", "state": "CA", "zip_code": "94102", "country": "US"},
+        {"id": "addr_alice_2", "user_id": "user_alice", "street": "456 Pine Ave", "city": "Oakland", "state": "CA", "zip_code": "94612", "country": "US"},
+        {"id": "addr_bob_1", "user_id": "user_bob", "street": "789 Maple Drive", "city": "Seattle", "state": "WA", "zip_code": "98101", "country": "US"},
+        {"id": "addr_carol_1", "user_id": "user_carol", "street": "321 Elm Road", "city": "Austin", "state": "TX", "zip_code": "78701", "country": "US"},
+        {"id": "addr_david_1", "user_id": "user_david", "street": "654 Cedar Lane", "city": "Denver", "state": "CO", "zip_code": "80202", "country": "US"},
+        {"id": "addr_emma_1", "user_id": "user_emma", "street": "987 Birch Blvd", "city": "Miami", "state": "FL", "zip_code": "33101", "country": "US"},
+    ]
+    for addr in addresses:
+        addresses_db[addr["id"]] = addr
+
+    # --- Orders (some historical) ---
+    orders = [
+        {"id": "ord_001", "user_id": "user_alice", "items": [{"product_id": "prod_iphone15", "quantity": 1}], "total": 999.99, "status": "delivered", "created_at": "2024-12-15T10:30:00"},
+        {"id": "ord_002", "user_id": "user_alice", "items": [{"product_id": "prod_yoga", "quantity": 2}, {"product_id": "prod_tshirt_m", "quantity": 3}], "total": 189.95, "status": "delivered", "created_at": "2024-12-20T14:15:00"},
+        {"id": "ord_003", "user_id": "user_bob", "items": [{"product_id": "prod_macbook", "quantity": 1}], "total": 3499.99, "status": "shipped", "created_at": "2024-12-28T09:00:00"},
+        {"id": "ord_004", "user_id": "user_carol", "items": [{"product_id": "prod_sofa", "quantity": 1}, {"product_id": "prod_chair", "quantity": 2}], "total": 2199.97, "status": "processing", "created_at": "2025-01-01T16:45:00"},
+        {"id": "ord_005", "user_id": "user_david", "items": [{"product_id": "prod_bike", "quantity": 1}], "total": 899.99, "status": "pending", "created_at": "2025-01-02T08:20:00"},
+    ]
+    for order in orders:
+        orders_db[order["id"]] = order
+
+    # --- Payments ---
+    payments = [
+        {"id": "pay_001", "order_id": "ord_001", "amount": 999.99, "method": "visa", "status": "completed", "created_at": "2024-12-15T10:31:00"},
+        {"id": "pay_002", "order_id": "ord_002", "amount": 189.95, "method": "paypal", "status": "completed", "created_at": "2024-12-20T14:16:00"},
+        {"id": "pay_003", "order_id": "ord_003", "amount": 3499.99, "method": "mastercard", "status": "completed", "created_at": "2024-12-28T09:02:00"},
+        {"id": "pay_004", "order_id": "ord_004", "amount": 2199.97, "method": "visa", "status": "pending", "created_at": "2025-01-01T16:46:00"},
+    ]
+    for pay in payments:
+        payments_db[pay["id"]] = pay
+
+    # --- Shipments ---
+    shipments = [
+        {"id": "ship_001", "order_id": "ord_001", "carrier": "fedex", "tracking_number": "FX123456789", "status": "delivered", "created_at": "2024-12-15T12:00:00"},
+        {"id": "ship_002", "order_id": "ord_002", "carrier": "ups", "tracking_number": "UP987654321", "status": "delivered", "created_at": "2024-12-20T16:00:00"},
+        {"id": "ship_003", "order_id": "ord_003", "carrier": "fedex", "tracking_number": "FX456789123", "status": "in_transit", "created_at": "2024-12-29T10:00:00"},
+    ]
+    for ship in shipments:
+        shipments_db[ship["id"]] = ship
+
+    # --- Reviews ---
+    reviews = [
+        {"id": "rev_001", "product_id": "prod_iphone15", "user_id": "user_alice", "rating": 5, "comment": "Amazing phone! The camera is incredible.", "created_at": "2024-12-18T09:00:00"},
+        {"id": "rev_002", "product_id": "prod_macbook", "user_id": "user_bob", "rating": 5, "comment": "Best laptop I've ever owned. Super fast!", "created_at": "2024-12-30T11:30:00"},
+        {"id": "rev_003", "product_id": "prod_yoga", "user_id": "user_alice", "rating": 4, "comment": "Great mat, very comfortable. Slightly heavy.", "created_at": "2024-12-22T15:00:00"},
+        {"id": "rev_004", "product_id": "prod_sofa", "user_id": "user_emma", "rating": 3, "comment": "Nice design but delivery took too long.", "created_at": "2024-11-10T14:00:00"},
+        {"id": "rev_005", "product_id": "prod_thinkpad", "user_id": "user_david", "rating": 5, "comment": "Perfect for work. Battery lasts all day.", "created_at": "2024-10-05T10:00:00"},
+    ]
+    for rev in reviews:
+        reviews_db[rev["id"]] = rev
+
+    # --- Wishlists ---
+    wishlists = [
+        {"id": "wish_alice", "user_id": "user_alice", "items": ["prod_macbook", "prod_dress_w", "prod_treadmill"]},
+        {"id": "wish_bob", "user_id": "user_bob", "items": ["prod_bike", "prod_desk"]},
+        {"id": "wish_carol", "user_id": "user_carol", "items": ["prod_samsung24", "prod_blazer_w"]},
+    ]
+    for wish in wishlists:
+        wishlists_db[wish["id"]] = wish
+
+    # --- Coupons ---
+    coupons = [
+        {"id": "coup_001", "code": "WELCOME10", "discount_percent": 10, "valid_until": "2025-12-31", "min_order": 50},
+        {"id": "coup_002", "code": "SUMMER20", "discount_percent": 20, "valid_until": "2025-08-31", "min_order": 100},
+        {"id": "coup_003", "code": "VIP30", "discount_percent": 30, "valid_until": "2025-06-30", "min_order": 500},
+        {"id": "coup_004", "code": "FLASH15", "discount_percent": 15, "valid_until": "2025-02-28", "min_order": 75},
+    ]
+    for coup in coupons:
+        coupons_db[coup["id"]] = coup
+
+    # --- Support Tickets ---
+    tickets = [
+        {"id": "tkt_001", "user_id": "user_carol", "subject": "Order delayed", "description": "My order ord_004 has been processing for 2 days", "status": "open", "priority": "high", "created_at": "2025-01-02T10:00:00"},
+        {"id": "tkt_002", "user_id": "user_emma", "subject": "Refund request", "description": "I would like to return the sofa, not satisfied with quality", "status": "open", "priority": "medium", "created_at": "2024-11-15T09:00:00"},
+        {"id": "tkt_003", "user_id": "user_bob", "subject": "Tracking not updating", "description": "Shipment FX456789123 hasn't updated in 3 days", "status": "in_progress", "priority": "medium", "created_at": "2025-01-01T14:00:00"},
+    ]
+    for tkt in tickets:
+        support_tickets_db[tkt["id"]] = tkt
+
+    # --- Carts (some with items) ---
+    carts = [
+        {"user_id": "user_emma", "items": [{"product_id": "prod_pixel8", "quantity": 1}, {"product_id": "prod_yoga", "quantity": 1}], "total": 749.98},
+        {"user_id": "user_david", "items": [{"product_id": "prod_desk", "quantity": 1}, {"product_id": "prod_chair", "quantity": 1}], "total": 1049.98},
+    ]
+    for cart in carts:
+        carts_db[cart["user_id"]] = cart
+
+
+# Run seed on startup
+@app.on_event("startup")
+def startup_event():
+    seed_data()
+    print(f"Seeded database: {len(users_db)} users, {len(products_db)} products, {len(orders_db)} orders")
+
+
 # ============================================================================
 # Models
 # ============================================================================
@@ -379,12 +537,24 @@ def get_cart_summary(user_id: str):
     cart = carts_db.get(user_id, {"items": []})
     return {"items_count": len(cart["items"]), "subtotal": 0, "tax": 0, "total": 0}
 
+def _calculate_order_total(items: list[dict]) -> float:
+    """Calculate total from order items by looking up product prices."""
+    total = 0.0
+    for item in items:
+        product_id = item.get("product_id")
+        quantity = item.get("quantity", 1)
+        if product_id and product_id in products_db:
+            price = products_db[product_id].get("price", 0)
+            total += price * quantity
+    return total
+
 @app.post("/cart/{user_id}/checkout", tags=["cart"])
 def checkout_cart(user_id: str, shipping_address_id: str, payment_method: str):
     """checkout cart and create order"""
     cart = carts_db.get(user_id, {"items": []})
     oid = str(uuid4())[:8]
-    order = {"id": oid, "user_id": user_id, "items": cart["items"], "total": 100, "status": "pending", "created_at": datetime.now().isoformat()}
+    total = _calculate_order_total(cart["items"])
+    order = {"id": oid, "user_id": user_id, "items": cart["items"], "total": total, "status": "pending", "created_at": datetime.now().isoformat()}
     orders_db[oid] = order
     carts_db[user_id] = {"items": [], "total": 0}
     return order
@@ -406,7 +576,8 @@ def list_orders(status: Optional[str] = None, limit: int = 50):
 def create_order(order: OrderCreate):
     """create new order"""
     oid = str(uuid4())[:8]
-    new_order = {"id": oid, "user_id": order.user_id, "items": order.items, "total": 0, "status": "pending", "created_at": datetime.now().isoformat()}
+    total = _calculate_order_total(order.items)
+    new_order = {"id": oid, "user_id": order.user_id, "items": order.items, "total": total, "status": "pending", "created_at": datetime.now().isoformat()}
     orders_db[oid] = new_order
     return new_order
 
