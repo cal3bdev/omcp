@@ -22,6 +22,7 @@ class AuthType(str, Enum):
     API_KEY = "api_key"
     BEARER = "bearer"
     OAUTH2 = "oauth2"
+    JWT = "jwt"  # Dynamic JWT auth with validation
 
 
 class LLMProvider(str, Enum):
@@ -38,11 +39,60 @@ class LLMProvider(str, Enum):
 # -----------------------------------------------------------------------------
 
 
+class JWTValidationConfig(BaseModel):
+    """JWT validation configuration for dynamic auth."""
+
+    enabled: bool = True
+    jwks_url: str | None = None
+    jwks_cache_ttl_seconds: int = 3600
+    issuer: str | None = None
+    audience: str | None = None
+    algorithms: list[str] = Field(default_factory=lambda: ["RS256"])
+    clock_skew_seconds: int = 30
+    required_claims: list[str] = Field(default_factory=lambda: ["exp", "sub"])
+
+
+class TokenIntrospectionConfig(BaseModel):
+    """Token introspection configuration for opaque tokens."""
+
+    enabled: bool = False
+    url: str | None = None
+    client_id: str | None = None
+    client_secret: str | None = None
+    cache_ttl_seconds: int = 60
+
+
+class AuthHeaderConfig(BaseModel):
+    """Auth header configuration."""
+
+    name: str = "Authorization"
+    scheme: str | None = "Bearer"
+
+
+class DevModeConfig(BaseModel):
+    """Development mode configuration for static token fallback."""
+
+    enabled: bool = False
+    token_env: str | None = None  # Environment variable containing dev token
+
+
+class DynamicAuthConfig(BaseModel):
+    """Dynamic authentication configuration (stateless passthrough).
+
+    Clients are responsible for obtaining tokens. OMCP validates and forwards.
+    """
+
+    validation: JWTValidationConfig = Field(default_factory=JWTValidationConfig)
+    introspection: TokenIntrospectionConfig = Field(default_factory=TokenIntrospectionConfig)
+    header: AuthHeaderConfig = Field(default_factory=AuthHeaderConfig)
+    dev_mode: DevModeConfig = Field(default_factory=DevModeConfig)
+
+
 class AuthConfig(BaseModel):
     """Authentication configuration."""
 
     type: AuthType
-    # API key / Bearer
+    # API key / Bearer (static tokens - legacy/simple mode)
     token: str | None = None
     key: str | None = None
     header_name: str = "Authorization"
@@ -52,6 +102,11 @@ class AuthConfig(BaseModel):
     auth_url: str | None = None
     token_url: str | None = None
     scopes: list[str] = Field(default_factory=list)
+    # Dynamic auth (JWT validation, passthrough)
+    validation: JWTValidationConfig = Field(default_factory=JWTValidationConfig)
+    introspection: TokenIntrospectionConfig = Field(default_factory=TokenIntrospectionConfig)
+    header: AuthHeaderConfig = Field(default_factory=AuthHeaderConfig)
+    dev_mode: DevModeConfig = Field(default_factory=DevModeConfig)
 
 
 # -----------------------------------------------------------------------------

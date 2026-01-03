@@ -7,6 +7,7 @@ import signal
 from enum import Enum
 from typing import Any
 
+import uvicorn
 from fastmcp import FastMCP
 
 from omcp.config.models import OMCPConfig, ServerSettings
@@ -86,14 +87,32 @@ class ServerRunner:
         """Run server with SSE transport."""
         host = self.config.server.host
         port = self.config.server.port
-        self.mcp.run(transport="sse", host=host, port=port, show_banner=False)
+
+        # Get middleware from builder (for dynamic auth)
+        middleware = self._builder.get_asgi_middleware() if self._builder else []
+
+        if middleware:
+            # Use http_app with middleware for dynamic auth
+            app = self.mcp.http_app(transport="sse", middleware=middleware)
+            uvicorn.run(app, host=host, port=port, log_level="warning")
+        else:
+            self.mcp.run(transport="sse", host=host, port=port, show_banner=False)
 
     def _run_http(self) -> None:
         """Run server with HTTP transport."""
         host = self.config.server.host
         port = self.config.server.port
-        # FastMCP uses streamable-http transport
-        self.mcp.run(transport="streamable-http", host=host, port=port, show_banner=False)
+
+        # Get middleware from builder (for dynamic auth)
+        middleware = self._builder.get_asgi_middleware() if self._builder else []
+
+        if middleware:
+            # Use http_app with middleware for dynamic auth
+            app = self.mcp.http_app(transport="streamable-http", middleware=middleware)
+            uvicorn.run(app, host=host, port=port, log_level="warning")
+        else:
+            # FastMCP uses streamable-http transport
+            self.mcp.run(transport="streamable-http", host=host, port=port, show_banner=False)
 
     async def run_async(self) -> None:
         """Run the MCP server asynchronously."""
@@ -131,21 +150,43 @@ class ServerRunner:
         """Run server with SSE transport asynchronously."""
         host = self.config.server.host
         port = self.config.server.port
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(
-            None,
-            lambda: self.mcp.run(transport="sse", host=host, port=port, show_banner=False),
-        )
+
+        # Get middleware from builder (for dynamic auth)
+        middleware = self._builder.get_asgi_middleware() if self._builder else []
+
+        if middleware:
+            # Use http_app with middleware for dynamic auth
+            app = self.mcp.http_app(transport="sse", middleware=middleware)
+            config = uvicorn.Config(app, host=host, port=port, log_level="warning")
+            server = uvicorn.Server(config)
+            await server.serve()
+        else:
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(
+                None,
+                lambda: self.mcp.run(transport="sse", host=host, port=port, show_banner=False),
+            )
 
     async def _run_http_async(self) -> None:
         """Run server with HTTP transport asynchronously."""
         host = self.config.server.host
         port = self.config.server.port
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(
-            None,
-            lambda: self.mcp.run(transport="streamable-http", host=host, port=port, show_banner=False),
-        )
+
+        # Get middleware from builder (for dynamic auth)
+        middleware = self._builder.get_asgi_middleware() if self._builder else []
+
+        if middleware:
+            # Use http_app with middleware for dynamic auth
+            app = self.mcp.http_app(transport="streamable-http", middleware=middleware)
+            config = uvicorn.Config(app, host=host, port=port, log_level="warning")
+            server = uvicorn.Server(config)
+            await server.serve()
+        else:
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(
+                None,
+                lambda: self.mcp.run(transport="streamable-http", host=host, port=port, show_banner=False),
+            )
 
 
 def run_server(config: OMCPConfig) -> None:

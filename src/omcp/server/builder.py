@@ -7,8 +7,10 @@ from typing import Any
 import httpx
 from fastmcp import FastMCP
 
-from omcp.auth import AuthProvider, create_auth_provider
-from omcp.config.models import OMCPConfig
+from omcp.auth import AuthProvider, DynamicAuth, create_auth_provider
+from omcp.auth.asgi import create_auth_middleware
+from omcp.auth.httpx_auth import DynamicTokenAuth
+from omcp.config.models import AuthType, OMCPConfig
 from omcp.filters import RouteMap, build_route_map
 from omcp.spec import NormalizedSpec, load_spec_sync, normalize_spec, validate_spec
 
@@ -46,6 +48,18 @@ class ServerBuilder:
         return self._auth
 
     @property
+    def is_dynamic_auth(self) -> bool:
+        """Check if dynamic (JWT) auth is configured."""
+        return self.config.auth.type == AuthType.JWT
+
+    @property
+    def dynamic_auth(self) -> DynamicAuth | None:
+        """Get DynamicAuth provider if JWT auth is configured."""
+        if self.is_dynamic_auth and isinstance(self.auth, DynamicAuth):
+            return self.auth
+        return None
+
+    @property
     def route_map(self) -> RouteMap:
         """Get the route map, building if necessary."""
         if self._route_map is None:
@@ -78,15 +92,27 @@ class ServerBuilder:
 
     def _create_http_client(self) -> httpx.AsyncClient:
         """Create configured HTTP client with auth."""
-        # Get auth headers
-        auth_headers = self.auth.get_headers_sync()
+        # Start with advanced headers from config
+        headers = dict(self.config.advanced.headers)
 
-        # Merge with advanced headers from config
-        headers = {**self.config.advanced.headers, **auth_headers}
+        # Determine auth approach based on type
+        httpx_auth = None
+
+        if self.config.auth.type == AuthType.JWT:
+            # Dynamic auth: use httpx auth class that reads from context
+            httpx_auth = DynamicTokenAuth(
+                header_name=self.config.auth.header.name,
+                scheme=self.config.auth.header.scheme or "Bearer",
+            )
+        else:
+            # Static auth: get headers directly from auth provider
+            auth_headers = self.auth.get_headers_sync()
+            headers.update(auth_headers)
 
         return httpx.AsyncClient(
             base_url=self.spec.base_url,
             headers=headers,
+            auth=httpx_auth,
             timeout=httpx.Timeout(self.config.server.timeout),
         )
 
@@ -176,6 +202,27 @@ class ServerBuilder:
             })
 
         return tools
+
+    def get_asgi_middleware(self) -> list[Any]:
+        """Get ASGI middleware for HTTP transport.
+
+        Returns middleware that should be added to the HTTP app,
+        particularly for dynamic auth.
+
+        Returns:
+            List of ASGI middleware classes
+        """
+        middleware = []
+
+        # Add auth middleware for dynamic auth
+        if self.is_dynamic_auth and self.dynamic_auth:
+            auth_middleware = create_auth_middleware(
+                dynamic_auth=self.dynamic_auth,
+                require_auth=True,  # Could be configurable
+            )
+            middleware.append(auth_middleware)
+
+        return middleware
 
 
 def build_server(config: OMCPConfig) -> FastMCP:
