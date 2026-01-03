@@ -146,7 +146,7 @@ def reset_session():
 def create_ui():
     """Create the Gradio interface."""
     
-    with gr.Blocks(title="MCP Agent Chat", theme=gr.themes.Soft()) as demo:
+    with gr.Blocks(title="MCP Agent Chat") as demo:
         gr.Markdown("""
         # 🤖 MCP Agent Chat
         
@@ -168,7 +168,6 @@ def create_ui():
         chatbot = gr.Chatbot(
             label="Chat",
             height=400,
-            type="messages",
         )
         
         with gr.Row():
@@ -207,14 +206,14 @@ def create_ui():
         async def respond(message, chat_history, url):
             if not message.strip():
                 return "", chat_history
-            
-            chat_history = chat_history + [{"role": "user", "content": message}]
-            
+
+            chat_history = chat_history + [(message, None)]
+
             response = ""
             async for text, _ in chat(message, chat_history, url):
                 response = text
-            
-            chat_history = chat_history + [{"role": "assistant", "content": response}]
+
+            chat_history[-1] = (message, response)
             return "", chat_history
         
         msg.submit(
@@ -246,4 +245,5 @@ if __name__ == "__main__":
         server_name="0.0.0.0",
         server_port=7860,
         share=False,
+        theme=gr.themes.Soft(),
     )
