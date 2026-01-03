@@ -70,9 +70,6 @@ class ServerRunner:
         """Run the MCP server synchronously."""
         transport = self._get_transport()
 
-        print_info(f"Starting {self.config.name}")
-        print_info(f"Transport: {transport.value}")
-
         if transport == Transport.STDIO:
             self._run_stdio()
         elif transport == Transport.SSE:
@@ -82,40 +79,25 @@ class ServerRunner:
 
     def _run_stdio(self) -> None:
         """Run server with stdio transport."""
-        print_info("Running with stdio transport (for Claude Desktop)")
-        print_info("Server is ready. Waiting for MCP client connection...")
-
-        # FastMCP's run method handles stdio
-        self.mcp.run()
+        # FastMCP's run method handles stdio, suppress its banner
+        self.mcp.run(show_banner=False)
 
     def _run_sse(self) -> None:
         """Run server with SSE transport."""
         host = self.config.server.host
         port = self.config.server.port
-
-        print_info(f"Running with SSE transport on {host}:{port}")
-        print_success(f"Server ready at http://{host}:{port}/sse")
-
-        self.mcp.run(transport="sse", host=host, port=port)
+        self.mcp.run(transport="sse", host=host, port=port, show_banner=False)
 
     def _run_http(self) -> None:
         """Run server with HTTP transport."""
         host = self.config.server.host
         port = self.config.server.port
-
-        print_info(f"Running with HTTP transport on {host}:{port}")
-        print_success(f"Server ready at http://{host}:{port}")
-
         # FastMCP uses streamable-http transport
-        self.mcp.run(transport="streamable-http", host=host, port=port)
+        self.mcp.run(transport="streamable-http", host=host, port=port, show_banner=False)
 
     async def run_async(self) -> None:
         """Run the MCP server asynchronously."""
         transport = self._get_transport()
-
-        print_info(f"Starting {self.config.name}")
-        print_info(f"Transport: {transport.value}")
-
         self._shutdown_event = asyncio.Event()
 
         # Set up signal handlers for graceful shutdown
@@ -137,44 +119,32 @@ class ServerRunner:
 
     def _handle_shutdown(self) -> None:
         """Handle shutdown signal."""
-        print_info("Shutting down...")
         if self._shutdown_event:
             self._shutdown_event.set()
 
     async def _run_stdio_async(self) -> None:
         """Run server with stdio transport asynchronously."""
-        print_info("Running with stdio transport")
-        # For stdio, we just run the sync version in executor
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self.mcp.run)
+        await loop.run_in_executor(None, lambda: self.mcp.run(show_banner=False))
 
     async def _run_sse_async(self) -> None:
         """Run server with SSE transport asynchronously."""
         host = self.config.server.host
         port = self.config.server.port
-
-        print_info(f"Running with SSE transport on {host}:{port}")
-        print_success(f"Server ready at http://{host}:{port}/sse")
-
-        # Run in executor since FastMCP.run is blocking
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(
             None,
-            lambda: self.mcp.run(transport="sse", host=host, port=port),
+            lambda: self.mcp.run(transport="sse", host=host, port=port, show_banner=False),
         )
 
     async def _run_http_async(self) -> None:
         """Run server with HTTP transport asynchronously."""
         host = self.config.server.host
         port = self.config.server.port
-
-        print_info(f"Running with HTTP transport on {host}:{port}")
-        print_success(f"Server ready at http://{host}:{port}")
-
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(
             None,
-            lambda: self.mcp.run(transport="streamable-http", host=host, port=port),
+            lambda: self.mcp.run(transport="streamable-http", host=host, port=port, show_banner=False),
         )
 
 

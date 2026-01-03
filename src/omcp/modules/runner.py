@@ -190,7 +190,7 @@ class ModuleRunner:
             port: Port to bind to
             transport: Transport type (sse or streamable-http)
         """
-        mcp.run(transport=transport, host=host, port=port)
+        mcp.run(transport=transport, host=host, port=port, show_banner=False)
 
     async def run_async(self) -> None:
         """Run all module servers asynchronously."""

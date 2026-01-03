@@ -16,6 +16,7 @@ from omcp.config import load_config
 from omcp.config.models import AuthType, Mode
 from omcp.utils.console import console, create_table, print_error, print_info, print_success, print_warning
 from omcp.utils.errors import OMCPError
+from omcp.utils import ui
 
 app = typer.Typer(
     name="omcp",
@@ -68,9 +69,9 @@ def serve(
     """
     try:
         cfg = load_config(config)
-        print_info(f"Loaded config: {cfg.name}")
-        print_info(f"Mode: {cfg.mode.value}")
-        print_info(f"Spec: {cfg.spec}")
+
+        # Show branded banner
+        ui.print_banner(__version__)
 
         if cfg.mode == Mode.MODULAR:
             _serve_modular(cfg, plan_file)
@@ -81,7 +82,7 @@ def serve(
         print_error(e)
         raise typer.Exit(1)
     except KeyboardInterrupt:
-        print_info("Server stopped")
+        ui.print_status("Server stopped", "info")
 
 
 def _serve_single(cfg) -> None:
@@ -92,7 +93,28 @@ def _serve_single(cfg) -> None:
     builder = ServerBuilder(cfg)
     tools = builder.get_tool_list()
 
-    print_info(f"Exposing {len(tools)} tools")
+    # Get transport/host/port from config
+    transport = cfg.server.transport
+    host = cfg.server.host
+    port = cfg.server.port
+
+    # Show config summary
+    server_info = ui.ServerInfo(
+        name=cfg.name,
+        mode="single",
+        transport=transport,
+        host=host,
+        port=port,
+        spec=str(cfg.spec),
+        total_tools=len(tools),
+    )
+    ui.print_config_summary(server_info)
+
+    # Show tools
+    ui.print_tool_list(tools)
+
+    # Show ready status
+    ui.print_single_server_ready(server_info)
 
     # Run the server
     run_server(cfg)
@@ -109,28 +131,23 @@ def _serve_modular(cfg, plan_file: Path | None) -> None:
     from omcp.spec import load_spec_sync, normalize_spec, validate_spec
 
     # Load and normalize spec
-    print_info(f"Loading spec: {cfg.spec}")
+    ui.print_status(f"Loading spec: {cfg.spec}", "loading")
     raw_spec = load_spec_sync(cfg.spec)
     validate_spec(raw_spec)
     spec = normalize_spec(raw_spec, cfg.base_url)
-    print_info(f"Found {len(spec.operations)} operations")
 
     # Load plan if provided or if using LLM strategy
     plan: OMCPPlan | None = None
 
     if plan_file and plan_file.exists():
-        print_info(f"Loading plan: {plan_file}")
         plan_data = json.loads(plan_file.read_text())
         plan = OMCPPlan.model_validate(plan_data)
-        print_info(f"Plan has {len(plan.tools)} tools in {len(plan.modules)} modules")
     elif cfg.modules.split_strategy == "llm":
         # Try default plan path
         default_plan = Path(cfg.llm.output.plan_path)
         if default_plan.exists():
-            print_info(f"Loading plan: {default_plan}")
             plan_data = json.loads(default_plan.read_text())
             plan = OMCPPlan.model_validate(plan_data)
-            print_info(f"Plan has {len(plan.tools)} tools in {len(plan.modules)} modules")
         else:
             print_error("LLM split strategy requires a plan file")
             print_info(f"Run 'omcp plan' first or provide --plan option")
@@ -139,22 +156,56 @@ def _serve_modular(cfg, plan_file: Path | None) -> None:
     # Create module runner
     module_runner = ModuleRunner(cfg, spec, plan)
 
-    # Show module info
+    # Gather module info for UI
     module_info = module_runner.get_module_info()
-    print_info(f"Starting {len(module_info)} modules:")
-    for info in module_info:
-        print_info(f"  {info['name']}: {info['tool_count']} tools")
+    transport = cfg.modules.runtime.transport
+    host = cfg.modules.runtime.host
+    base_port = cfg.modules.runtime.base_port
+
+    # Build UI module info
+    ui_modules = []
+    total_tools = 0
+    for i, info in enumerate(module_info):
+        port = base_port + i
+        url = f"http://{host}:{port}" if transport != "stdio" else "stdio"
+        ui_modules.append(ui.ModuleInfo(
+            name=info["name"],
+            url=url,
+            tool_count=info["tool_count"],
+            tools=[t["name"] for t in info["tools"]],
+        ))
+        total_tools += info["tool_count"]
+
+    # Show config summary
+    hub_url = f"http://{cfg.hub.host}:{cfg.hub.port}" if cfg.hub.enabled else None
+    server_info = ui.ServerInfo(
+        name=cfg.name,
+        mode="modular",
+        transport=transport,
+        host=host,
+        port=base_port,
+        spec=str(cfg.spec),
+        total_tools=total_tools,
+        modules=ui_modules,
+        hub_enabled=cfg.hub.enabled,
+        hub_url=hub_url,
+    )
+    ui.print_config_summary(server_info)
+
+    # Show modules
+    ui.print_modules_starting(ui_modules)
 
     # Check if hub is enabled
     if cfg.hub.enabled:
         # Run modules and hub together (pass spec and plan for tool schemas)
-        asyncio.run(_run_modules_and_hub(cfg, module_runner, spec, plan))
+        asyncio.run(_run_modules_and_hub(cfg, module_runner, spec, plan, server_info))
     else:
-        # Just run modules
+        # Show ready and run modules
+        ui.print_modular_ready(server_info)
         module_runner.run()
 
 
-async def _run_modules_and_hub(cfg, module_runner, spec, plan) -> None:
+async def _run_modules_and_hub(cfg, module_runner, spec, plan, server_info: ui.ServerInfo) -> None:
     """Run modules and hub together using ThreadPoolExecutor.
 
     Args:
@@ -162,6 +213,7 @@ async def _run_modules_and_hub(cfg, module_runner, spec, plan) -> None:
         module_runner: ModuleRunner instance with modules to start
         spec: Normalized OpenAPI spec (for tool schemas)
         plan: OMCP plan (for tool names and descriptions)
+        server_info: UI server info for status display
     """
     import asyncio
     import signal
@@ -211,14 +263,12 @@ async def _run_modules_and_hub(cfg, module_runner, spec, plan) -> None:
             )
             module_runner.registry.register(instance)
 
-            # Start in executor
+            # Start in executor (suppress FastMCP banner)
             future = loop.run_in_executor(
                 executor,
-                lambda m=mcp, t=transport, h=host, p=port: m.run(transport=t, host=h, port=p)
+                lambda m=mcp, t=transport, h=host, p=port: m.run(transport=t, host=h, port=p, show_banner=False)
             )
             futures.append(future)
-
-            print_success(f"  {name}: {url} ({len(builder.module.operations)} tools)")
 
         # Brief delay to let modules start
         await asyncio.sleep(0.5)
@@ -229,18 +279,16 @@ async def _run_modules_and_hub(cfg, module_runner, spec, plan) -> None:
             spec=spec,
             plan=plan,
         )
-        print_info(f"Hub registry: {len(hub_registry)} modules, {len(hub_registry.list_tools())} tools")
 
         # Start hub
         hub_runner = HubRunner(hub_registry, cfg.hub)
-        print_info("Starting Hub: " + cfg.hub.name)
-        print_info(f"Transport: {cfg.hub.transport}")
-        print_success(f"Hub ready at http://{cfg.hub.host}:{cfg.hub.port}")
-        print_info("All services started. Press Ctrl+C to stop.")
 
         # Run hub in executor
         hub_future = loop.run_in_executor(executor, hub_runner.run)
         futures.append(hub_future)
+
+        # Show final ready status
+        ui.print_hub_ready(server_info)
 
         # Wait for shutdown
         await shutdown_event.wait()

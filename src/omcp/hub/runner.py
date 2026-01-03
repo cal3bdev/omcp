@@ -50,25 +50,18 @@ class HubRunner:
         host = self.settings.host
         port = self.settings.port
 
-        print_info(f"Starting Hub: {self.settings.name}")
-        print_info(f"Transport: {transport}")
-
         if transport == "stdio":
-            self.mcp.run()
+            self.mcp.run(show_banner=False)
         elif transport == "sse":
-            print_success(f"Hub ready at http://{host}:{port}/sse")
-            self.mcp.run(transport="sse", host=host, port=port)
+            self.mcp.run(transport="sse", host=host, port=port, show_banner=False)
         else:  # http
-            print_success(f"Hub ready at http://{host}:{port}")
-            self.mcp.run(transport="streamable-http", host=host, port=port)
+            self.mcp.run(transport="streamable-http", host=host, port=port, show_banner=False)
 
     async def run_async(self) -> None:
         """Run the hub server asynchronously."""
         transport = self.settings.transport
         host = self.settings.host
         port = self.settings.port
-
-        print_info(f"Starting Hub: {self.settings.name}")
 
         self._shutdown_event = asyncio.Event()
         loop = asyncio.get_running_loop()
@@ -81,18 +74,16 @@ class HubRunner:
 
         try:
             if transport == "stdio":
-                await loop.run_in_executor(None, self.mcp.run)
+                await loop.run_in_executor(None, lambda: self.mcp.run(show_banner=False))
             elif transport == "sse":
-                print_success(f"Hub ready at http://{host}:{port}/sse")
                 await loop.run_in_executor(
                     None,
-                    lambda: self.mcp.run(transport="sse", host=host, port=port),
+                    lambda: self.mcp.run(transport="sse", host=host, port=port, show_banner=False),
                 )
             else:
-                print_success(f"Hub ready at http://{host}:{port}")
                 await loop.run_in_executor(
                     None,
-                    lambda: self.mcp.run(transport="streamable-http", host=host, port=port),
+                    lambda: self.mcp.run(transport="streamable-http", host=host, port=port, show_banner=False),
                 )
         finally:
             for sig in (signal.SIGINT, signal.SIGTERM):
@@ -103,7 +94,6 @@ class HubRunner:
 
     def _handle_shutdown(self) -> None:
         """Handle shutdown signal."""
-        print_info("Shutting down hub...")
         if self._shutdown_event:
             self._shutdown_event.set()
 
