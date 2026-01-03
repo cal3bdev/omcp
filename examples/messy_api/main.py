@@ -12,12 +12,20 @@ from typing import Optional
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Query, Header
+from fastapi.routing import APIRoute
 from pydantic import BaseModel, Field
+
+
+def generate_operation_id(route: APIRoute) -> str:
+    """Generate clean operation IDs using just the function name."""
+    return route.endpoint.__name__
+
 
 app = FastAPI(
     title="Acme Widget Store API",
     description="API for widgets and stuff",
     version="2.1.0",
+    generate_unique_id_function=generate_operation_id,
 )
 
 # In-memory databases

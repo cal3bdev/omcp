@@ -6,6 +6,7 @@ from typing import Any
 
 import httpx
 from fastmcp import FastMCP
+from fastmcp.server.openapi import MCPType
 
 from omcp.auth import AuthProvider, DynamicAuth, create_auth_provider
 from omcp.auth.asgi import create_auth_middleware
@@ -116,32 +117,51 @@ class ServerBuilder:
             timeout=httpx.Timeout(self.config.server.timeout),
         )
 
-    def _create_component_filter(self) -> Any:
-        """Create a component filter function for FastMCP.
+    def _create_route_map_fn(self) -> Any:
+        """Create a route mapping function for FastMCP endpoint filtering.
 
-        Returns a function that filters out excluded operations and
-        applies description overrides.
-
-        Note: FastMCP passes HTTPRoute Pydantic model objects, not dicts.
+        Returns a function that determines which routes to include/exclude.
+        FastMCPOpenAPI calls this with (route, mcp_type) and expects:
+        - MCPType.EXCLUDE to exclude the route
+        - MCPType.TOOL/RESOURCE/etc to include with that type
+        - None to use the default type
         """
-        # Build sets for fast lookup
-        included_ops = {op.operation_id for op in self.route_map.get_included_operations()}
+        # Build set of excluded operation IDs for fast lookup
+        excluded_ops = {op.operation_id for op in self.route_map.get_excluded_operations()}
+
+        def route_map_fn(route: Any, current_type: MCPType) -> MCPType | None:
+            op_id = getattr(route, "operation_id", None)
+
+            # If this operation should be excluded, return EXCLUDE
+            if op_id and op_id in excluded_ops:
+                return MCPType.EXCLUDE
+
+            # Otherwise, keep the default type
+            return None
+
+        return route_map_fn
+
+    def _create_component_fn(self) -> Any | None:
+        """Create a component customization function for FastMCP.
+
+        Returns a function that customizes components (e.g., description overrides).
+        FastMCPOpenAPI calls this with (route, component) to modify in-place.
+
+        Returns None if no customization is needed.
+        """
         desc_overrides = self.route_map.description_overrides
 
-        def component_fn(component: Any, openapi_spec: Any = None) -> Any | None:
-            # Get operation ID from HTTPRoute object
-            op_id = getattr(component, "operation_id", None)
+        # If no overrides, no need for a component function
+        if not desc_overrides:
+            return None
 
-            # Check if this operation should be excluded
-            if op_id and op_id not in included_ops:
-                return None
+        def component_fn(route: Any, component: Any) -> None:
+            # Get operation ID from route
+            op_id = getattr(route, "operation_id", None)
 
             # Apply description override if present
             if op_id and op_id in desc_overrides:
-                # HTTPRoute is a Pydantic model - use model_copy to modify
-                component = component.model_copy(update={"description": desc_overrides[op_id]})
-
-            return component
+                component.description = desc_overrides[op_id]
 
         return component_fn
 
@@ -160,14 +180,18 @@ class ServerBuilder:
         # Create HTTP client
         http_client = self._create_http_client()
 
-        # Create component filter for include/exclude
-        component_fn = self._create_component_filter()
+        # Create route filter for include/exclude
+        route_map_fn = self._create_route_map_fn()
+
+        # Create component customization function (for description overrides)
+        component_fn = self._create_component_fn()
 
         # Use FastMCP's OpenAPI integration - from_openapi is a CLASS METHOD
         # that returns a new FastMCPOpenAPI instance (subclass of FastMCP)
         mcp = FastMCP.from_openapi(
             openapi_spec=self.spec.spec,
             client=http_client,
+            route_map_fn=route_map_fn,
             mcp_component_fn=component_fn,
             mcp_names=mcp_names if mcp_names else None,
             name=self.config.name,

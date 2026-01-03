@@ -71,7 +71,7 @@ class Note(BaseModel):
 # ============================================================================
 
 
-@app.get("/tasks", response_model=list[Task], tags=["tasks"])
+@app.get("/tasks", response_model=list[Task], tags=["tasks"], operation_id="list_tasks")
 def list_tasks(
     completed: Optional[bool] = Query(None, description="Filter by completion status"),
     priority: Optional[str] = Query(None, description="Filter by priority"),
@@ -89,7 +89,7 @@ def list_tasks(
     return tasks[:limit]
 
 
-@app.post("/tasks", response_model=Task, status_code=201, tags=["tasks"])
+@app.post("/tasks", response_model=Task, status_code=201, tags=["tasks"], operation_id="create_task")
 def create_task(task: TaskCreate) -> dict:
     """Create a new task."""
     global task_id_counter
@@ -110,7 +110,7 @@ def create_task(task: TaskCreate) -> dict:
     return new_task
 
 
-@app.get("/tasks/{task_id}", response_model=Task, tags=["tasks"])
+@app.get("/tasks/{task_id}", response_model=Task, tags=["tasks"], operation_id="get_task")
 def get_task(task_id: int) -> dict:
     """Get a specific task by ID."""
     if task_id not in tasks_db:
@@ -118,7 +118,7 @@ def get_task(task_id: int) -> dict:
     return tasks_db[task_id]
 
 
-@app.patch("/tasks/{task_id}", response_model=Task, tags=["tasks"])
+@app.patch("/tasks/{task_id}", response_model=Task, tags=["tasks"], operation_id="update_task")
 def update_task(task_id: int, task: TaskUpdate) -> dict:
     """Update a task's fields."""
     if task_id not in tasks_db:
@@ -133,7 +133,7 @@ def update_task(task_id: int, task: TaskUpdate) -> dict:
     return existing
 
 
-@app.delete("/tasks/{task_id}", status_code=204, tags=["tasks"])
+@app.delete("/tasks/{task_id}", status_code=204, tags=["tasks"], operation_id="delete_task")
 def delete_task(task_id: int) -> None:
     """Delete a task."""
     if task_id not in tasks_db:
@@ -141,7 +141,7 @@ def delete_task(task_id: int) -> None:
     del tasks_db[task_id]
 
 
-@app.post("/tasks/{task_id}/complete", response_model=Task, tags=["tasks"])
+@app.post("/tasks/{task_id}/complete", response_model=Task, tags=["tasks"], operation_id="complete_task")
 def complete_task(task_id: int) -> dict:
     """Mark a task as completed."""
     if task_id not in tasks_db:
@@ -156,7 +156,7 @@ def complete_task(task_id: int) -> dict:
 # ============================================================================
 
 
-@app.get("/notes", response_model=list[Note], tags=["notes"])
+@app.get("/notes", response_model=list[Note], tags=["notes"], operation_id="list_notes")
 def list_notes(
     task_id: Optional[int] = Query(None, description="Filter by task ID"),
 ) -> list[dict]:
@@ -169,7 +169,7 @@ def list_notes(
     return notes
 
 
-@app.post("/notes", response_model=Note, status_code=201, tags=["notes"])
+@app.post("/notes", response_model=Note, status_code=201, tags=["notes"], operation_id="create_note")
 def create_note(note: NoteCreate) -> dict:
     """Create a new note."""
     global note_id_counter
@@ -191,7 +191,7 @@ def create_note(note: NoteCreate) -> dict:
     return new_note
 
 
-@app.get("/notes/{note_id}", response_model=Note, tags=["notes"])
+@app.get("/notes/{note_id}", response_model=Note, tags=["notes"], operation_id="get_note")
 def get_note(note_id: int) -> dict:
     """Get a specific note by ID."""
     if note_id not in notes_db:
@@ -199,7 +199,7 @@ def get_note(note_id: int) -> dict:
     return notes_db[note_id]
 
 
-@app.delete("/notes/{note_id}", status_code=204, tags=["notes"])
+@app.delete("/notes/{note_id}", status_code=204, tags=["notes"], operation_id="delete_note")
 def delete_note(note_id: int) -> None:
     """Delete a note."""
     if note_id not in notes_db:
@@ -212,7 +212,7 @@ def delete_note(note_id: int) -> None:
 # ============================================================================
 
 
-@app.get("/stats", tags=["utility"])
+@app.get("/stats", tags=["utility"], operation_id="get_stats")
 def get_stats() -> dict:
     """Get statistics about tasks and notes."""
     tasks = list(tasks_db.values())
@@ -231,7 +231,7 @@ def get_stats() -> dict:
     }
 
 
-@app.get("/health", tags=["utility"])
+@app.get("/health", tags=["utility"], operation_id="health_check")
 def health_check() -> dict:
     """Health check endpoint."""
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}

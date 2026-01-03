@@ -1,0 +1,53 @@
+# OMCP Configuration for Notes API with Dynamic Auth
+#
+# This config demonstrates JWT passthrough authentication where:
+# - Clients provide their own JWT tokens
+# - OMCP forwards tokens to the upstream API
+# - The upstream API validates the tokens
+#
+# Run the API first:
+#   uvicorn examples.auth_api.main:app --port 8080
+#
+# Then run OMCP:
+#   uv run omcp serve --config examples/auth_api/omcp.yaml
+
+name: notes-api
+spec: http://localhost:8080/openapi.json
+base_url: http://localhost:8080
+
+# Dynamic JWT authentication (passthrough mode)
+auth:
+  type: jwt
+  validation:
+    # Validation disabled = pure passthrough
+    # The upstream API validates tokens
+    enabled: false
+  header:
+    name: Authorization
+    scheme: Bearer
+  dev_mode:
+    # Enable for local development without tokens
+    enabled: false
+
+# Server settings
+server:
+  transport: http  # Streamable HTTP for ADK clients
+  host: 127.0.0.1
+  port: 9000
+  timeout: 30
+
+# Endpoint filtering
+endpoints:
+  # Exclude auth endpoints (clients get tokens directly from API)
+  exclude:
+    - "POST /auth/token"
+    - "GET /auth/users"
+
+# Tool customizations
+tools:
+  list_notes:
+    description: "List all notes for the current authenticated user"
+  create_note:
+    description: "Create a new note for the current user"
+  get_me:
+    description: "Get information about the currently authenticated user"
