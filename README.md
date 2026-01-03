@@ -98,6 +98,65 @@ That's it. Your AI agent can now call your API.
 
 ---
 
+## Try the Demo
+
+Run the full hub demo with a 100+ operation e-commerce API:
+
+### Terminal 1: Start the Backend API
+```bash
+cd examples/large_api
+uv run uvicorn main:app --host 127.0.0.1 --port 8002
+```
+
+### Terminal 2: Start the OMCP Hub
+```bash
+cd examples/large_api
+uv run omcp serve -c omcp.yaml
+```
+
+You'll see the custom startup UI:
+```
+ ██████╗ ███╗   ███╗ ██████╗██████╗
+██╔═══██╗████╗ ████║██╔════╝██╔══██╗
+██║   ██║██╔████╔██║██║     ██████╔╝
+...
+╭─────────────── Configuration ───────────────╮
+│       API  MegaStore E-Commerce             │
+│      Mode  modular                          │
+│ Transport  http                             │
+╰─────────────────────────────────────────────╯
+╭──────────────── Modules ────────────────────╮
+│ user_management    │ http://127.0.0.1:9100  │
+│ product_catalog    │ http://127.0.0.1:9101  │
+│ order_management   │ http://127.0.0.1:9102  │
+│ ...                │                        │
+╰─────────────────────────────────────────────╯
+╭─────────── ● All Services Ready ────────────╮
+│ Hub  http://127.0.0.1:9000                  │
+╰─────────────────────────────────────────────╯
+```
+
+### Terminal 3: Run the Agent CLI
+```bash
+uv run python examples/client/agent.py
+```
+
+### Example Conversation
+```
+You: Create a user John Doe with john@example.com
+
+Agent: User John Doe has been created with ID `abc123`.
+
+You: Add a MacBook Pro to his cart and checkout with his address
+
+Agent: I've added the MacBook Pro 16" ($3,499.99) to John's cart
+and completed checkout to his address. Order ID: `ord_456`.
+```
+
+See `examples/client/prompts.md` for more example scenarios.
+
+---
+
 ## Architecture
 
 ### Single Mode (Small APIs)
