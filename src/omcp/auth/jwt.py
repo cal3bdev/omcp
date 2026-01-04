@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any, TYPE_CHECKING
 from urllib.parse import urlparse
@@ -62,8 +63,45 @@ class JWTValidator:
             )
         return self._jwks_client
 
+    def _validate_sync(self, token: str) -> dict[str, Any]:
+        """Synchronous JWT validation (runs in thread pool).
+
+        This method performs the actual JWT validation, including
+        JWKS key fetching which may involve network I/O.
+
+        Args:
+            token: The JWT token string
+
+        Returns:
+            Decoded token claims
+        """
+        # Get signing key from JWKS (may do network I/O on cache miss)
+        signing_key = self.jwks_client.get_signing_key_from_jwt(token)
+
+        # Build decode options
+        options = {
+            "require": self.config.required_claims or ["exp", "sub"],
+            "verify_exp": True,
+            "verify_aud": self.config.audience is not None,
+            "verify_iss": self.config.issuer is not None,
+        }
+
+        # Decode and verify
+        return jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=self.config.algorithms or ["RS256"],
+            audience=self.config.audience,
+            issuer=self.config.issuer,
+            leeway=self.config.clock_skew_seconds or 30,
+            options=options,
+        )
+
     async def validate(self, token: str) -> dict[str, Any]:
         """Validate a JWT token and return its claims.
+
+        This method runs the synchronous JWT validation in a thread pool
+        to avoid blocking the event loop during JWKS key fetching.
 
         Args:
             token: The JWT token string
@@ -78,28 +116,9 @@ class JWTValidator:
             InvalidTokenError: If token is invalid
         """
         try:
-            # Get signing key from JWKS
-            signing_key = self.jwks_client.get_signing_key_from_jwt(token)
-
-            # Build decode options
-            options = {
-                "require": self.config.required_claims or ["exp", "sub"],
-                "verify_exp": True,
-                "verify_aud": self.config.audience is not None,
-                "verify_iss": self.config.issuer is not None,
-            }
-
-            # Decode and verify
-            claims = jwt.decode(
-                token,
-                signing_key.key,
-                algorithms=self.config.algorithms or ["RS256"],
-                audience=self.config.audience,
-                issuer=self.config.issuer,
-                leeway=self.config.clock_skew_seconds or 30,
-                options=options,
-            )
-
+            # Run sync validation in thread pool to avoid blocking event loop
+            # This is important because JWKS fetching can do network I/O
+            claims = await asyncio.to_thread(self._validate_sync, token)
             return claims
 
         except jwt.ExpiredSignatureError:
@@ -110,14 +129,14 @@ class JWTValidator:
             raise InvalidIssuerError(self.config.issuer or "unknown")
         except jwt.DecodeError as e:
             logger.debug("JWT decode error: %s", e)
-            raise InvalidTokenError(f"Decode error: {e}")
+            raise InvalidTokenError("Token decode failed")
         except jwt.InvalidTokenError as e:
             logger.debug("JWT validation error: %s", e)
-            raise InvalidTokenError(str(e))
+            raise InvalidTokenError("Token validation failed")
         except Exception as e:
             # Log unexpected errors at warning level for debugging
             logger.warning("Unexpected JWT validation error: %s", e, exc_info=True)
-            raise InvalidTokenError(f"Validation failed: {e}")
+            raise InvalidTokenError("Validation failed")
 
     def clear_cache(self) -> None:
         """Clear the JWKS cache."""

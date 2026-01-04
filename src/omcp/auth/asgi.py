@@ -60,8 +60,9 @@ class DynamicAuthMiddleware(BaseHTTPMiddleware):
         Returns:
             The response from downstream handlers
         """
-        # Get Authorization header
-        auth_header = request.headers.get("Authorization")
+        # Get auth header using configured header name (default: Authorization)
+        header_name = self.dynamic_auth.config.header.name or "Authorization"
+        auth_header = request.headers.get(header_name)
 
         # Skip auth for certain paths (health checks, etc.)
         if self._should_skip_auth(request):

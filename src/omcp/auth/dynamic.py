@@ -105,7 +105,7 @@ class DynamicAuth(AuthProvider):
         self.jwt_validator = jwt_validator
 
     def extract_token(self, authorization_header: str | None) -> str:
-        """Extract bearer token from Authorization header.
+        """Extract token from Authorization header.
 
         Args:
             authorization_header: The Authorization header value
@@ -115,14 +115,21 @@ class DynamicAuth(AuthProvider):
 
         Raises:
             MissingAuthError: If header is missing
-            InvalidAuthSchemeError: If not using expected scheme
+            InvalidAuthSchemeError: If not using expected scheme (when scheme is set)
             MissingTokenError: If token is empty
         """
         if not authorization_header:
             raise MissingAuthError()
 
-        # Get expected scheme from config
-        expected_scheme = self.config.header.scheme or "Bearer"
+        # Get expected scheme from config (None means raw token, no scheme)
+        expected_scheme = self.config.header.scheme
+
+        # If no scheme configured, treat entire header value as raw token
+        if expected_scheme is None:
+            token = authorization_header.strip()
+            if not token:
+                raise MissingTokenError()
+            return token
 
         # Split scheme and token
         parts = authorization_header.split(" ", 1)
@@ -161,9 +168,18 @@ class DynamicAuth(AuthProvider):
         # Extract token
         token = self.extract_token(authorization_header)
 
+        # Get header config for forwarding
+        header_name = self.config.header.name or "Authorization"
+        header_scheme = self.config.header.scheme  # Can be None for raw tokens
+
         # If validation is disabled or no validator, return unvalidated context
         if not self.config.validation.enabled or not self.jwt_validator:
-            return AuthContext(token=token, validated=False)
+            return AuthContext(
+                token=token,
+                validated=False,
+                header_name=header_name,
+                header_scheme=header_scheme,
+            )
 
         # Validate the token
         claims_dict = await self.jwt_validator.validate(token)
@@ -173,6 +189,8 @@ class DynamicAuth(AuthProvider):
             token=token,
             claims=claims,
             validated=True,
+            header_name=header_name,
+            header_scheme=header_scheme,
         )
 
     async def get_headers(self) -> dict[str, str]:

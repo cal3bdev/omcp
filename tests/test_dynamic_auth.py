@@ -481,6 +481,197 @@ class TestCreateDynamicAuth:
         assert auth.jwt_validator is None
 
 
+class TestAuthContextHeaders:
+    """Tests for AuthContext header methods."""
+
+    def test_get_header_value_with_scheme(self):
+        """Test header value with scheme."""
+        ctx = AuthContext(
+            token="my-token",
+            validated=False,
+            header_name="Authorization",
+            header_scheme="Bearer",
+        )
+        assert ctx.get_header_value() == "Bearer my-token"
+
+    def test_get_header_value_without_scheme(self):
+        """Test raw header value without scheme."""
+        ctx = AuthContext(
+            token="api-key-123",
+            validated=False,
+            header_name="X-API-Key",
+            header_scheme=None,
+        )
+        assert ctx.get_header_value() == "api-key-123"
+
+    def test_get_auth_headers_with_scheme(self):
+        """Test get_auth_headers with scheme."""
+        ctx = AuthContext(
+            token="my-token",
+            validated=False,
+            header_name="Authorization",
+            header_scheme="Bearer",
+        )
+        headers = ctx.get_auth_headers()
+        assert headers == {"Authorization": "Bearer my-token"}
+
+    def test_get_auth_headers_custom_header(self):
+        """Test get_auth_headers with custom header name."""
+        ctx = AuthContext(
+            token="secret-key",
+            validated=False,
+            header_name="X-Custom-Auth",
+            header_scheme="Token",
+        )
+        headers = ctx.get_auth_headers()
+        assert headers == {"X-Custom-Auth": "Token secret-key"}
+
+    def test_get_auth_headers_raw_token(self):
+        """Test get_auth_headers with raw token (no scheme)."""
+        ctx = AuthContext(
+            token="raw-api-key",
+            validated=False,
+            header_name="X-API-Key",
+            header_scheme=None,
+        )
+        headers = ctx.get_auth_headers()
+        assert headers == {"X-API-Key": "raw-api-key"}
+
+
+class TestDynamicAuthCustomHeaders:
+    """Tests for DynamicAuth with custom headers and raw tokens."""
+
+    def create_config(
+        self,
+        header_name: str = "Authorization",
+        scheme: str | None = "Bearer",
+    ) -> AuthConfig:
+        """Create test auth config with custom header settings."""
+        return AuthConfig(
+            type=AuthType.JWT,
+            validation=JWTValidationConfig(enabled=False),
+            header=AuthHeaderConfig(name=header_name, scheme=scheme),
+        )
+
+    def test_extract_raw_token_no_scheme(self):
+        """Test extracting raw token when scheme is None."""
+        config = self.create_config(header_name="X-API-Key", scheme=None)
+        auth = DynamicAuth(config)
+
+        token = auth.extract_token("my-raw-api-key")
+        assert token == "my-raw-api-key"
+
+    def test_extract_raw_token_with_spaces(self):
+        """Test raw token extraction trims whitespace."""
+        config = self.create_config(header_name="X-API-Key", scheme=None)
+        auth = DynamicAuth(config)
+
+        token = auth.extract_token("  spaced-token  ")
+        assert token == "spaced-token"
+
+    def test_extract_token_custom_scheme(self):
+        """Test extracting token with custom scheme."""
+        config = self.create_config(scheme="Token")
+        auth = DynamicAuth(config)
+
+        token = auth.extract_token("Token my-custom-token")
+        assert token == "my-custom-token"
+
+    @pytest.mark.asyncio
+    async def test_authenticate_preserves_header_config(self):
+        """Test authenticate stores header config in context."""
+        config = self.create_config(header_name="X-Auth", scheme="Key")
+        auth = DynamicAuth(config)
+
+        ctx = await auth.authenticate("Key secret123")
+
+        assert ctx.token == "secret123"
+        assert ctx.header_name == "X-Auth"
+        assert ctx.header_scheme == "Key"
+
+    @pytest.mark.asyncio
+    async def test_authenticate_raw_token_preserves_null_scheme(self):
+        """Test authenticate preserves null scheme for raw tokens."""
+        config = self.create_config(header_name="X-API-Key", scheme=None)
+        auth = DynamicAuth(config)
+
+        ctx = await auth.authenticate("raw-token-value")
+
+        assert ctx.token == "raw-token-value"
+        assert ctx.header_name == "X-API-Key"
+        assert ctx.header_scheme is None
+
+
+class TestDynamicTokenAuthCustomHeaders:
+    """Tests for DynamicTokenAuth with custom headers."""
+
+    def test_uses_context_header_config(self):
+        """Test DynamicTokenAuth uses header config from context."""
+        auth = DynamicTokenAuth()
+
+        ctx = AuthContext(
+            token="ctx-token",
+            validated=False,
+            header_name="X-Custom-Header",
+            header_scheme="Custom",
+        )
+        context_token = set_current_auth_context(ctx)
+
+        try:
+            import httpx
+
+            request = httpx.Request("GET", "https://api.example.com/test")
+            flow = auth.auth_flow(request)
+            modified_request = next(flow)
+
+            assert modified_request.headers["X-Custom-Header"] == "Custom ctx-token"
+        finally:
+            reset_auth_context(context_token)
+
+    def test_uses_context_raw_token(self):
+        """Test DynamicTokenAuth handles raw tokens from context."""
+        auth = DynamicTokenAuth()
+
+        ctx = AuthContext(
+            token="raw-api-key",
+            validated=False,
+            header_name="X-API-Key",
+            header_scheme=None,
+        )
+        context_token = set_current_auth_context(ctx)
+
+        try:
+            import httpx
+
+            request = httpx.Request("GET", "https://api.example.com/test")
+            flow = auth.auth_flow(request)
+            modified_request = next(flow)
+
+            assert modified_request.headers["X-API-Key"] == "raw-api-key"
+        finally:
+            reset_auth_context(context_token)
+
+    def test_context_defaults_used(self):
+        """Test DynamicTokenAuth uses context defaults."""
+        auth = DynamicTokenAuth(header_name="X-Token", scheme=None)
+
+        # Context with default header config (Authorization/Bearer)
+        ctx = AuthContext(token="test-token", validated=False)
+        context_token = set_current_auth_context(ctx)
+
+        try:
+            import httpx
+
+            request = httpx.Request("GET", "https://api.example.com/test")
+            flow = auth.auth_flow(request)
+            modified_request = next(flow)
+
+            # Uses context's default header config (Authorization/Bearer)
+            assert modified_request.headers["Authorization"] == "Bearer test-token"
+        finally:
+            reset_auth_context(context_token)
+
+
 class TestAuthFactory:
     """Tests for auth factory JWT support."""
 

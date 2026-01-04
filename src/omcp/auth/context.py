@@ -58,6 +58,27 @@ class AuthContext:
     token: str  # Raw token string (for forwarding to upstream)
     claims: TokenClaims | None = None  # Parsed claims (if validated)
     validated: bool = False  # Whether token was validated by OMCP
+    # Header configuration for forwarding (preserves how token was received)
+    header_name: str = "Authorization"  # Header name for forwarding
+    header_scheme: str | None = "Bearer"  # Scheme (None for raw token)
+
+    def get_header_value(self) -> str:
+        """Get the full header value for forwarding.
+
+        Returns the token formatted with scheme if configured,
+        or raw token if scheme is None.
+        """
+        if self.header_scheme:
+            return f"{self.header_scheme} {self.token}"
+        return self.token
+
+    def get_auth_headers(self) -> dict[str, str]:
+        """Get auth headers dict for forwarding to upstream.
+
+        Returns:
+            Dict with header name and formatted value
+        """
+        return {self.header_name: self.get_header_value()}
 
     @property
     def user_id(self) -> str | None:

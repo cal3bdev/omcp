@@ -21,13 +21,13 @@ class DynamicTokenAuth(httpx.Auth):
     def __init__(
         self,
         header_name: str = "Authorization",
-        scheme: str = "Bearer",
+        scheme: str | None = "Bearer",
     ) -> None:
         """Initialize dynamic token auth.
 
         Args:
             header_name: Name of the header to set
-            scheme: Auth scheme (e.g., "Bearer")
+            scheme: Auth scheme (e.g., "Bearer"), or None for raw token
         """
         self.header_name = header_name
         self.scheme = scheme
@@ -46,8 +46,16 @@ class DynamicTokenAuth(httpx.Auth):
         ctx = get_current_auth_context()
 
         if ctx and ctx.token:
-            # Add the token to the request
-            request.headers[self.header_name] = f"{self.scheme} {ctx.token}"
+            # Always use context's header config - it was set during authentication
+            # and reflects how the token should be forwarded to upstream
+            header_name = ctx.header_name
+            scheme = ctx.header_scheme
+
+            # Add the token to the request (with scheme if configured)
+            if scheme:
+                request.headers[header_name] = f"{scheme} {ctx.token}"
+            else:
+                request.headers[header_name] = ctx.token
 
         yield request
 

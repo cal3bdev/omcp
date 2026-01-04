@@ -187,10 +187,11 @@ class HubRouter:
         }
 
         # Build headers, including auth from current context
+        # Uses configured header name and scheme from the auth context
         headers: dict[str, str] = {"Content-Type": "application/json"}
         auth_ctx = get_current_auth_context()
         if auth_ctx and auth_ctx.token:
-            headers["Authorization"] = f"Bearer {auth_ctx.token}"
+            headers.update(auth_ctx.get_auth_headers())
 
         # Send request to module
         response = await self.client.post(

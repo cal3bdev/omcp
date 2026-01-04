@@ -209,10 +209,11 @@ class HubBuilder:
             args = arguments or {}
 
             # Get auth headers from current context to forward to module
+            # Uses configured header name and scheme from the auth context
             headers: dict[str, str] = {}
             auth_ctx = get_current_auth_context()
             if auth_ctx and auth_ctx.token:
-                headers["Authorization"] = f"Bearer {auth_ctx.token}"
+                headers = auth_ctx.get_auth_headers()
 
             try:
                 # Connect to the module's MCP server
