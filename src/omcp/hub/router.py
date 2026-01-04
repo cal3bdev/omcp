@@ -195,8 +195,14 @@ class HubRouter:
             headers.update(http_headers)
 
         # Send request to module
+        # For streamable-http transport, modules serve at /mcp endpoint
+        # SSE modules already include /sse in their URL
+        module_endpoint = module.url
+        if not module_endpoint.endswith(("/sse", "/mcp")):
+            module_endpoint = f"{module_endpoint}/mcp"
+
         response = await self.client.post(
-            module.url,
+            module_endpoint,
             json=request_body,
             headers=headers,
         )

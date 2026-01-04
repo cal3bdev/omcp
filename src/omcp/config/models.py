@@ -40,16 +40,26 @@ class LLMProvider(str, Enum):
 
 
 class JWTValidationConfig(BaseModel):
-    """JWT validation configuration for dynamic auth."""
+    """JWT validation configuration for dynamic auth.
+
+    When enabled=True, tokens are validated using FastMCP's JWTVerifier.
+    When enabled=False (passthrough mode), tokens are forwarded without validation.
+
+    Note: FastMCP's JWTVerifier has some limitations compared to full JWT validation:
+    - Only the first algorithm in the list is used
+    - clock_skew_seconds is not configurable (uses library defaults)
+    - jwks_cache_ttl_seconds is not configurable (uses library defaults)
+    - required_claims beyond 'exp' are not enforced (exp is always checked)
+    """
 
     enabled: bool = True
     jwks_url: str | None = None
-    jwks_cache_ttl_seconds: int = 3600
+    jwks_cache_ttl_seconds: int = 3600  # Note: Not currently used by FastMCP
     issuer: str | None = None
     audience: str | None = None
-    algorithms: list[str] = Field(default_factory=lambda: ["RS256"])
-    clock_skew_seconds: int = 30
-    required_claims: list[str] = Field(default_factory=lambda: ["exp", "sub"])
+    algorithms: list[str] = Field(default_factory=lambda: ["RS256"])  # Only first is used
+    clock_skew_seconds: int = 30  # Note: Not currently used by FastMCP
+    required_claims: list[str] = Field(default_factory=lambda: ["exp", "sub"])  # Note: Only exp is enforced
 
 
 class TokenIntrospectionConfig(BaseModel):
@@ -63,7 +73,13 @@ class TokenIntrospectionConfig(BaseModel):
 
 
 class AuthHeaderConfig(BaseModel):
-    """Auth header configuration."""
+    """Auth header configuration.
+
+    Note: For JWT auth (auth.type: jwt), custom header names and schemes are
+    NOT supported. FastMCP's JWTVerifier only validates tokens from the standard
+    'Authorization: Bearer <token>' header. Use auth.type: bearer or api_key
+    if you need custom header names.
+    """
 
     name: str = "Authorization"
     scheme: str | None = "Bearer"
