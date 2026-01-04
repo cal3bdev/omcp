@@ -5,7 +5,6 @@ from __future__ import annotations
 from omcp.auth.api_key import ApiKeyAuth, ApiKeyLocation
 from omcp.auth.base import AuthProvider
 from omcp.auth.bearer import BearerAuth
-from omcp.auth.dynamic import DynamicAuth, create_dynamic_auth
 from omcp.auth.none import NoneAuth
 from omcp.auth.oauth2 import OAuth2Auth
 from omcp.auth.storage import TokenStorage
@@ -40,7 +39,11 @@ def create_auth_provider(
     elif config.type == AuthType.OAUTH2:
         return _create_oauth2_auth(config, provider_name, storage)
     elif config.type == AuthType.JWT:
-        return create_dynamic_auth(config)
+        # JWT auth is handled by FastMCP's built-in capabilities:
+        # - Header forwarding via get_http_headers()
+        # - Token validation via JWTVerifier (set on mcp.auth)
+        # No custom auth provider needed.
+        return NoneAuth()
     else:
         raise ConfigError(f"Unknown auth type: {config.type}")
 

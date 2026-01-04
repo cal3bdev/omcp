@@ -8,12 +8,12 @@ import httpx
 from fastmcp import FastMCP
 from fastmcp.server.openapi import MCPType
 
-from omcp.auth import AuthProvider, DynamicAuth, create_auth_provider
-from omcp.auth.asgi import create_auth_middleware
-from omcp.auth.httpx_auth import DynamicTokenAuth
+from omcp.auth import AuthProvider, create_auth_provider
 from omcp.config.models import AuthType, OMCPConfig
 from omcp.filters import RouteMap, build_route_map
 from omcp.spec import NormalizedSpec, load_spec_sync, normalize_spec, validate_spec
+
+from fastmcp.server.auth import AuthProvider as FastMCPAuthProvider
 
 
 class ServerBuilder:
@@ -49,16 +49,14 @@ class ServerBuilder:
         return self._auth
 
     @property
-    def is_dynamic_auth(self) -> bool:
-        """Check if dynamic (JWT) auth is configured."""
+    def is_jwt_auth(self) -> bool:
+        """Check if JWT auth is configured."""
         return self.config.auth.type == AuthType.JWT
 
     @property
-    def dynamic_auth(self) -> DynamicAuth | None:
-        """Get DynamicAuth provider if JWT auth is configured."""
-        if self.is_dynamic_auth and isinstance(self.auth, DynamicAuth):
-            return self.auth
-        return None
+    def jwt_validation_enabled(self) -> bool:
+        """Check if JWT validation is enabled (vs passthrough)."""
+        return self.is_jwt_auth and self.config.auth.validation.enabled
 
     @property
     def route_map(self) -> RouteMap:
@@ -92,28 +90,26 @@ class ServerBuilder:
         )
 
     def _create_http_client(self) -> httpx.AsyncClient:
-        """Create configured HTTP client with auth."""
+        """Create configured HTTP client.
+
+        For JWT auth (both passthrough and validation modes), FastMCP
+        automatically forwards headers from the incoming request to upstream
+        via get_http_headers(). No special httpx auth is needed.
+
+        For static auth types (API key, bearer), headers are set directly.
+        """
         # Start with advanced headers from config
         headers = dict(self.config.advanced.headers)
 
-        # Determine auth approach based on type
-        httpx_auth = None
-
-        if self.config.auth.type == AuthType.JWT:
-            # Dynamic auth: use httpx auth class that reads from context
-            httpx_auth = DynamicTokenAuth(
-                header_name=self.config.auth.header.name,
-                scheme=self.config.auth.header.scheme or "Bearer",
-            )
-        else:
-            # Static auth: get headers directly from auth provider
+        # For static auth types, add headers directly
+        # JWT auth relies on FastMCP's automatic header forwarding
+        if self.config.auth.type not in (AuthType.JWT, AuthType.NONE):
             auth_headers = self.auth.get_headers_sync()
             headers.update(auth_headers)
 
         return httpx.AsyncClient(
             base_url=self.spec.base_url,
             headers=headers,
-            auth=httpx_auth,
             timeout=httpx.Timeout(self.config.server.timeout),
         )
 
@@ -165,6 +161,49 @@ class ServerBuilder:
 
         return component_fn
 
+    def _create_fastmcp_auth(self) -> FastMCPAuthProvider | None:
+        """Create FastMCP auth provider for JWT validation.
+
+        For JWT auth with validation enabled, creates a JWTVerifier that
+        validates tokens before processing requests. FastMCP still handles
+        header forwarding to upstream automatically.
+
+        For passthrough mode (validation disabled), returns None - FastMCP's
+        built-in header forwarding handles passing the Authorization header
+        to upstream APIs.
+
+        Returns:
+            JWTVerifier for validation mode, None for passthrough
+        """
+        if not self.jwt_validation_enabled:
+            return None
+
+        from fastmcp.server.auth.providers.jwt import JWTVerifier
+
+        validation = self.config.auth.validation
+
+        # Build JWTVerifier kwargs based on config
+        kwargs: dict[str, Any] = {}
+
+        if validation.jwks_url:
+            kwargs["jwks_uri"] = validation.jwks_url
+        elif validation.issuer:
+            # For symmetric/static key validation, we'd need a public_key
+            # For now, require JWKS URL for validation
+            raise ValueError(
+                "JWT validation requires jwks_url to be configured. "
+                "Set validation.enabled=false for passthrough mode."
+            )
+
+        if validation.issuer:
+            kwargs["issuer"] = validation.issuer
+        if validation.audience:
+            kwargs["audience"] = validation.audience
+        if validation.algorithms and len(validation.algorithms) > 0:
+            kwargs["algorithm"] = validation.algorithms[0]
+
+        return JWTVerifier(**kwargs)
+
     def build(self) -> FastMCP:
         """Build the FastMCP server.
 
@@ -196,6 +235,12 @@ class ServerBuilder:
             mcp_names=mcp_names if mcp_names else None,
             name=self.config.name,
         )
+
+        # Set FastMCP auth for JWT validation mode
+        # Passthrough mode relies on FastMCP's automatic header forwarding
+        fastmcp_auth = self._create_fastmcp_auth()
+        if fastmcp_auth:
+            mcp.auth = fastmcp_auth
 
         self._mcp = mcp
         return mcp
@@ -230,23 +275,16 @@ class ServerBuilder:
     def get_asgi_middleware(self) -> list[Any]:
         """Get ASGI middleware for HTTP transport.
 
-        Returns middleware that should be added to the HTTP app,
-        particularly for dynamic auth.
+        Note: For JWT auth, FastMCP handles authentication natively via its
+        auth provider system. Custom middleware is no longer needed.
 
         Returns:
-            List of ASGI middleware classes
+            Empty list (middleware handled by FastMCP auth provider)
         """
-        middleware = []
-
-        # Add auth middleware for dynamic auth
-        if self.is_dynamic_auth and self.dynamic_auth:
-            auth_middleware = create_auth_middleware(
-                dynamic_auth=self.dynamic_auth,
-                require_auth=True,  # Could be configurable
-            )
-            middleware.append(auth_middleware)
-
-        return middleware
+        # JWT auth is now handled by FastMCP's built-in auth provider
+        # (JWTVerifier set on mcp.auth in build())
+        # Header forwarding for passthrough is automatic via get_http_headers()
+        return []
 
 
 def build_server(config: OMCPConfig) -> FastMCP:

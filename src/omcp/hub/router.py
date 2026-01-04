@@ -7,8 +7,8 @@ from enum import Enum
 from typing import Any
 
 import httpx
+from fastmcp.server.dependencies import get_http_headers
 
-from omcp.auth.dynamic import get_current_auth_context
 from omcp.hub.registry import HubRegistry, RegisteredModule
 from omcp.utils.errors import OMCPError
 
@@ -187,11 +187,12 @@ class HubRouter:
         }
 
         # Build headers, including auth from current context
-        # Uses configured header name and scheme from the auth context
+        # FastMCP's get_http_headers() returns headers from the current request context
         headers: dict[str, str] = {"Content-Type": "application/json"}
-        auth_ctx = get_current_auth_context()
-        if auth_ctx and auth_ctx.token:
-            headers.update(auth_ctx.get_auth_headers())
+        http_headers = get_http_headers()
+        if http_headers:
+            # Forward all headers from the incoming request (includes Authorization)
+            headers.update(http_headers)
 
         # Send request to module
         response = await self.client.post(

@@ -11,8 +11,8 @@ import json
 from typing import Any
 
 from fastmcp import FastMCP
+from fastmcp.server.dependencies import get_http_headers
 
-from omcp.auth.dynamic import get_current_auth_context
 from omcp.config.models import HubSettings
 from omcp.hub.registry import HubRegistry, ToolSchema
 from omcp.hub.router import HubRouter, RoutingMode
@@ -208,12 +208,12 @@ class HubBuilder:
 
             args = arguments or {}
 
-            # Get auth headers from current context to forward to module
-            # Uses configured header name and scheme from the auth context
+            # Get headers from current request context to forward to module
+            # FastMCP's get_http_headers() captures Authorization and other headers
             headers: dict[str, str] = {}
-            auth_ctx = get_current_auth_context()
-            if auth_ctx and auth_ctx.token:
-                headers = auth_ctx.get_auth_headers()
+            http_headers = get_http_headers()
+            if http_headers:
+                headers = dict(http_headers)
 
             try:
                 # Connect to the module's MCP server

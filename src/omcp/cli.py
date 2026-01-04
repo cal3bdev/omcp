@@ -219,7 +219,16 @@ async def _run_modules_and_hub(cfg, module_runner, spec, plan, server_info: ui.S
     import signal
     from concurrent.futures import ThreadPoolExecutor
 
+    import uvicorn
     from omcp.hub import HubRunner, create_hub_registry_from_modules
+
+    def run_module_with_middleware(mcp, transport, host, port, middleware):
+        """Run a module server, using middleware if provided."""
+        if middleware:
+            app = mcp.http_app(transport=transport, middleware=middleware)
+            uvicorn.run(app, host=host, port=port, log_level="warning")
+        else:
+            mcp.run(transport=transport, host=host, port=port, show_banner=False)
 
     shutdown_event = asyncio.Event()
     loop = asyncio.get_running_loop()
@@ -248,6 +257,9 @@ async def _run_modules_and_hub(cfg, module_runner, spec, plan, server_info: ui.S
             url = module_runner._get_module_url(port)
             mcp = builder.build()
 
+            # Get middleware from builder (for dynamic auth)
+            middleware = builder.get_asgi_middleware()
+
             # Get tool names from builder
             tool_names = builder.get_tool_names()
 
@@ -263,10 +275,11 @@ async def _run_modules_and_hub(cfg, module_runner, spec, plan, server_info: ui.S
             )
             module_runner.registry.register(instance)
 
-            # Start in executor (suppress FastMCP banner)
+            # Start in executor with middleware support
             future = loop.run_in_executor(
                 executor,
-                lambda m=mcp, t=transport, h=host, p=port: m.run(transport=t, host=h, port=p, show_banner=False)
+                run_module_with_middleware,
+                mcp, transport, host, port, middleware if middleware else None,
             )
             futures.append(future)
 
@@ -280,8 +293,8 @@ async def _run_modules_and_hub(cfg, module_runner, spec, plan, server_info: ui.S
             plan=plan,
         )
 
-        # Start hub
-        hub_runner = HubRunner(hub_registry, cfg.hub)
+        # Start hub with auth config for middleware
+        hub_runner = HubRunner(hub_registry, cfg.hub, auth_config=cfg.auth)
 
         # Run hub in executor
         hub_future = loop.run_in_executor(executor, hub_runner.run)

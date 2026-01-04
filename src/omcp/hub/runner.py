@@ -6,9 +6,10 @@ import asyncio
 import signal
 from typing import Any
 
+import uvicorn
 from fastmcp import FastMCP
 
-from omcp.config.models import HubSettings
+from omcp.config.models import AuthConfig, AuthType, HubSettings
 from omcp.hub.builder import HubBuilder, build_hub
 from omcp.hub.registry import HubRegistry, ToolSchema
 from omcp.hub.router import HubRouter
@@ -25,15 +26,18 @@ class HubRunner:
         self,
         registry: HubRegistry,
         settings: HubSettings,
+        auth_config: AuthConfig | None = None,
     ) -> None:
         """Initialize the hub runner.
 
         Args:
             registry: Hub registry (pre-populated with modules)
             settings: Hub configuration
+            auth_config: Optional auth config (for dynamic auth middleware)
         """
         self.hub_registry = registry
         self.settings = settings
+        self.auth_config = auth_config
         self._mcp: FastMCP | None = None
         self._shutdown_event: asyncio.Event | None = None
 
@@ -42,7 +46,62 @@ class HubRunner:
         """Get the MCP server, building if necessary."""
         if self._mcp is None:
             self._mcp = build_hub(self.hub_registry, self.settings)
+            # Set FastMCP auth for JWT validation mode
+            fastmcp_auth = self._create_fastmcp_auth()
+            if fastmcp_auth:
+                self._mcp.auth = fastmcp_auth
         return self._mcp
+
+    def _create_fastmcp_auth(self) -> Any:
+        """Create FastMCP auth provider for JWT validation.
+
+        For JWT auth with validation enabled, creates a JWTVerifier.
+        For passthrough mode, returns None - FastMCP handles header forwarding.
+
+        Returns:
+            JWTVerifier for validation mode, None for passthrough
+        """
+        if not self.auth_config or self.auth_config.type != AuthType.JWT:
+            return None
+
+        # Check if validation is enabled
+        if not self.auth_config.validation.enabled:
+            return None
+
+        from fastmcp.server.auth.providers.jwt import JWTVerifier
+
+        validation = self.auth_config.validation
+
+        kwargs: dict[str, Any] = {}
+
+        if validation.jwks_url:
+            kwargs["jwks_uri"] = validation.jwks_url
+        elif validation.issuer:
+            raise ValueError(
+                "JWT validation requires jwks_url to be configured. "
+                "Set validation.enabled=false for passthrough mode."
+            )
+
+        if validation.issuer:
+            kwargs["issuer"] = validation.issuer
+        if validation.audience:
+            kwargs["audience"] = validation.audience
+        if validation.algorithms and len(validation.algorithms) > 0:
+            kwargs["algorithm"] = validation.algorithms[0]
+
+        return JWTVerifier(**kwargs)
+
+    def get_asgi_middleware(self) -> list[Any]:
+        """Get ASGI middleware for HTTP transport.
+
+        Note: For JWT auth, FastMCP handles authentication natively via its
+        auth provider system. Custom middleware is no longer needed.
+
+        Returns:
+            Empty list (middleware handled by FastMCP auth provider)
+        """
+        # JWT auth is now handled by FastMCP's built-in auth provider
+        return []
 
     def run(self) -> None:
         """Run the hub server synchronously."""
@@ -50,18 +109,38 @@ class HubRunner:
         host = self.settings.host
         port = self.settings.port
 
+        # Access mcp first to ensure it's built
+        mcp = self.mcp
+
+        # Get middleware for dynamic auth
+        middleware = self.get_asgi_middleware()
+
         if transport == "stdio":
-            self.mcp.run(show_banner=False)
+            mcp.run(show_banner=False)
         elif transport == "sse":
-            self.mcp.run(transport="sse", host=host, port=port, show_banner=False)
+            if middleware:
+                app = mcp.http_app(transport="sse", middleware=middleware)
+                uvicorn.run(app, host=host, port=port, log_level="warning")
+            else:
+                mcp.run(transport="sse", host=host, port=port, show_banner=False)
         else:  # http
-            self.mcp.run(transport="streamable-http", host=host, port=port, show_banner=False)
+            if middleware:
+                app = mcp.http_app(transport="streamable-http", middleware=middleware)
+                uvicorn.run(app, host=host, port=port, log_level="warning")
+            else:
+                mcp.run(transport="streamable-http", host=host, port=port, show_banner=False)
 
     async def run_async(self) -> None:
         """Run the hub server asynchronously."""
         transport = self.settings.transport
         host = self.settings.host
         port = self.settings.port
+
+        # Access mcp first to ensure it's built
+        mcp = self.mcp
+
+        # Get middleware for dynamic auth
+        middleware = self.get_asgi_middleware()
 
         self._shutdown_event = asyncio.Event()
         loop = asyncio.get_running_loop()
@@ -74,17 +153,29 @@ class HubRunner:
 
         try:
             if transport == "stdio":
-                await loop.run_in_executor(None, lambda: self.mcp.run(show_banner=False))
+                await loop.run_in_executor(None, lambda: mcp.run(show_banner=False))
             elif transport == "sse":
-                await loop.run_in_executor(
-                    None,
-                    lambda: self.mcp.run(transport="sse", host=host, port=port, show_banner=False),
-                )
+                if middleware:
+                    app = mcp.http_app(transport="sse", middleware=middleware)
+                    config = uvicorn.Config(app, host=host, port=port, log_level="warning")
+                    server = uvicorn.Server(config)
+                    await server.serve()
+                else:
+                    await loop.run_in_executor(
+                        None,
+                        lambda: mcp.run(transport="sse", host=host, port=port, show_banner=False),
+                    )
             else:
-                await loop.run_in_executor(
-                    None,
-                    lambda: self.mcp.run(transport="streamable-http", host=host, port=port, show_banner=False),
-                )
+                if middleware:
+                    app = mcp.http_app(transport="streamable-http", middleware=middleware)
+                    config = uvicorn.Config(app, host=host, port=port, log_level="warning")
+                    server = uvicorn.Server(config)
+                    await server.serve()
+                else:
+                    await loop.run_in_executor(
+                        None,
+                        lambda: mcp.run(transport="streamable-http", host=host, port=port, show_banner=False),
+                    )
         finally:
             for sig in (signal.SIGINT, signal.SIGTERM):
                 try:
@@ -261,12 +352,14 @@ def create_hub_registry_from_modules(
 def run_hub(
     registry: HubRegistry,
     settings: HubSettings,
+    auth_config: AuthConfig | None = None,
 ) -> None:
     """Run the hub server.
 
     Args:
         registry: Hub registry with modules
         settings: Hub configuration
+        auth_config: Optional auth config (for dynamic auth middleware)
     """
-    runner = HubRunner(registry, settings)
+    runner = HubRunner(registry, settings, auth_config=auth_config)
     runner.run()
