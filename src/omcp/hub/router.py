@@ -8,6 +8,7 @@ from typing import Any
 
 import httpx
 
+from omcp.auth.dynamic import get_current_auth_context
 from omcp.hub.registry import HubRegistry, RegisteredModule
 from omcp.utils.errors import OMCPError
 
@@ -185,11 +186,17 @@ class HubRouter:
             },
         }
 
+        # Build headers, including auth from current context
+        headers: dict[str, str] = {"Content-Type": "application/json"}
+        auth_ctx = get_current_auth_context()
+        if auth_ctx and auth_ctx.token:
+            headers["Authorization"] = f"Bearer {auth_ctx.token}"
+
         # Send request to module
         response = await self.client.post(
             module.url,
             json=request_body,
-            headers={"Content-Type": "application/json"},
+            headers=headers,
         )
 
         if response.status_code != 200:

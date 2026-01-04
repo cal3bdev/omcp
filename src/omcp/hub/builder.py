@@ -12,6 +12,7 @@ from typing import Any
 
 from fastmcp import FastMCP
 
+from omcp.auth.dynamic import get_current_auth_context
 from omcp.config.models import HubSettings
 from omcp.hub.registry import HubRegistry, ToolSchema
 from omcp.hub.router import HubRouter, RoutingMode
@@ -207,10 +208,16 @@ class HubBuilder:
 
             args = arguments or {}
 
+            # Get auth headers from current context to forward to module
+            headers: dict[str, str] = {}
+            auth_ctx = get_current_auth_context()
+            if auth_ctx and auth_ctx.token:
+                headers["Authorization"] = f"Bearer {auth_ctx.token}"
+
             try:
                 # Connect to the module's MCP server
                 module_endpoint = f"{module.url}/mcp"
-                async with streamablehttp_client(module_endpoint) as (read, write, _):
+                async with streamablehttp_client(module_endpoint, headers=headers) as (read, write, _):
                     async with ClientSession(read, write) as session:
                         await session.initialize()
 
