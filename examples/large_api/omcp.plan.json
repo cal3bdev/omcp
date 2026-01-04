@@ -12,7 +12,7 @@
   "modules": [
     {
       "name": "address_management",
-      "description": "Manage user addresses: create, retrieve, update, and delete addresses.",
+      "description": "Manage customer addresses, including listing, creating, updating, and deleting addresses.",
       "policy_overrides": {}
     },
     {
@@ -22,17 +22,17 @@
     },
     {
       "name": "cart_management",
-      "description": "Manage user shopping carts: get cart details, add/remove items, apply coupons, and checkout.",
+      "description": "Manage user carts, including getting cart details, clearing the cart, applying coupons, checking out, adding/updating/removing items, and getting a cart summary.",
       "policy_overrides": {}
     },
     {
       "name": "product_catalog",
-      "description": "Manage product categories: list, create, and retrieve categories and their associated products.",
+      "description": "Manage product categories, including listing, creating, and retrieving categories and their associated products.",
       "policy_overrides": {}
     },
     {
-      "name": "coupon_management",
-      "description": "Manage coupons: list, create, validate, retrieve, and delete coupons.",
+      "name": "promotion_management",
+      "description": "Manage coupons, including listing, creating, validating, retrieving, and deleting coupons.",
       "policy_overrides": {}
     },
     {
@@ -42,7 +42,7 @@
     },
     {
       "name": "inventory_management",
-      "description": "Tools for managing product inventory levels and reports.",
+      "description": "Tools for managing product inventory levels and alerts.",
       "policy_overrides": {}
     },
     {
@@ -52,7 +52,7 @@
     },
     {
       "name": "order_management",
-      "description": "Tools for managing customer orders, invoices, and shipments.",
+      "description": "Tools for managing customer orders, invoices, and payments.",
       "policy_overrides": {}
     },
     {
@@ -61,23 +61,18 @@
       "policy_overrides": {}
     },
     {
-      "name": "product_management",
-      "description": "Tools for managing products, including listing, creating, updating, and deleting products, as well as managing product reviews and related products.",
-      "policy_overrides": {}
-    },
-    {
-      "name": "promotion_management",
-      "description": "Tools for managing promotions, including listing promotions, getting promotion details, and getting products associated with a promotion.",
+      "name": "payment_management",
+      "description": "Tools for managing payments, including capturing, refunding, and voiding transactions.",
       "policy_overrides": {}
     },
     {
       "name": "shipping_management",
-      "description": "Tools for managing shipments, including listing, creating, and getting shipment details, generating shipping labels, updating shipment status, getting shipment tracking information, and managing shipping carriers and rates.",
+      "description": "Tools for managing shipments, including creating, updating, and tracking shipments, as well as retrieving shipping rates and validating addresses.",
       "policy_overrides": {}
     },
     {
-      "name": "customer_support",
-      "description": "Tools for providing customer support, including getting contact information, listing FAQs, and listing support tickets.",
+      "name": "support_operations",
+      "description": "Tools for accessing support information, including contact details, FAQs, and support tickets.",
       "policy_overrides": {}
     },
     {
@@ -93,7 +88,7 @@
   ],
   "tools": [
     {
-      "operation_id": "list_addresses_addresses_get",
+      "operation_id": "list_addresses",
       "method": "GET",
       "path": "/addresses",
       "tool_name": "list_addresses",
@@ -103,7 +98,7 @@
       "safety_notes": []
     },
     {
-      "operation_id": "create_address_addresses_post",
+      "operation_id": "create_address",
       "method": "POST",
       "path": "/addresses",
       "tool_name": "create_address",
@@ -113,187 +108,187 @@
       "safety_notes": []
     },
     {
-      "operation_id": "get_address_addresses__address_id__get",
+      "operation_id": "get_address",
       "method": "GET",
       "path": "/addresses/{address_id}",
       "tool_name": "get_address",
-      "description": "Get an address by its ID.",
+      "description": "Get an address by its ID. Requires address_id.",
       "expose": true,
       "module": "address_management",
       "safety_notes": []
     },
     {
-      "operation_id": "update_address_addresses__address_id__put",
+      "operation_id": "update_address",
       "method": "PUT",
       "path": "/addresses/{address_id}",
       "tool_name": "update_address",
-      "description": "Update an address by its ID.",
+      "description": "Update an address by its ID. Requires address_id.",
       "expose": true,
       "module": "address_management",
       "safety_notes": []
     },
     {
-      "operation_id": "delete_address_addresses__address_id__delete",
+      "operation_id": "delete_address",
       "method": "DELETE",
       "path": "/addresses/{address_id}",
       "tool_name": "delete_address",
-      "description": "Delete an address by its ID.",
+      "description": "Delete an address by its ID. Requires address_id.",
       "expose": true,
       "module": "address_management",
       "safety_notes": []
     },
     {
-      "operation_id": "set_default_address_addresses__address_id__set_default_post",
+      "operation_id": "set_default_address",
       "method": "POST",
       "path": "/addresses/{address_id}/set-default",
       "tool_name": "set_default_address",
-      "description": "Set an address as the default address for a user.",
+      "description": "Set an address as the default address. Requires address_id.",
       "expose": true,
       "module": "address_management",
       "safety_notes": []
     },
     {
-      "operation_id": "get_customer_analytics_analytics_customers_get",
+      "operation_id": "get_customer_analytics",
       "method": "GET",
       "path": "/analytics/customers",
       "tool_name": "get_customer_analytics",
-      "description": "Get customer analytics data.",
+      "description": "Get customer analytics report.",
       "expose": true,
       "module": "analytics_reporting",
       "safety_notes": []
     },
     {
-      "operation_id": "get_dashboard_analytics_dashboard_get",
+      "operation_id": "get_dashboard",
       "method": "GET",
       "path": "/analytics/dashboard",
       "tool_name": "get_dashboard",
-      "description": "Get dashboard analytics data.",
+      "description": "Get the main analytics dashboard.",
       "expose": true,
       "module": "analytics_reporting",
       "safety_notes": []
     },
     {
-      "operation_id": "get_inventory_analytics_analytics_inventory_get",
+      "operation_id": "get_inventory_analytics",
       "method": "GET",
       "path": "/analytics/inventory",
       "tool_name": "get_inventory_analytics",
-      "description": "Get inventory analytics data.",
+      "description": "Get inventory analytics report.",
       "expose": true,
       "module": "analytics_reporting",
       "safety_notes": []
     },
     {
-      "operation_id": "get_product_analytics_analytics_products_get",
+      "operation_id": "get_product_analytics",
       "method": "GET",
       "path": "/analytics/products",
       "tool_name": "get_product_analytics",
-      "description": "Get product analytics data.",
+      "description": "Get product analytics report.",
       "expose": true,
       "module": "analytics_reporting",
       "safety_notes": []
     },
     {
-      "operation_id": "get_revenue_analytics_analytics_revenue_get",
+      "operation_id": "get_revenue_analytics",
       "method": "GET",
       "path": "/analytics/revenue",
       "tool_name": "get_revenue_analytics",
-      "description": "Get revenue analytics data.",
+      "description": "Get revenue analytics report.",
       "expose": true,
       "module": "analytics_reporting",
       "safety_notes": []
     },
     {
-      "operation_id": "get_sales_analytics_analytics_sales_get",
+      "operation_id": "get_sales_analytics",
       "method": "GET",
       "path": "/analytics/sales",
       "tool_name": "get_sales_analytics",
-      "description": "Get sales analytics data.",
+      "description": "Get sales analytics report.",
       "expose": true,
       "module": "analytics_reporting",
       "safety_notes": []
     },
     {
-      "operation_id": "get_cart_cart__user_id__get",
+      "operation_id": "get_cart",
       "method": "GET",
       "path": "/cart/{user_id}",
       "tool_name": "get_cart",
-      "description": "Get the cart for a specific user.",
+      "description": "Get the cart for a user. Requires user_id.",
       "expose": true,
       "module": "cart_management",
       "safety_notes": []
     },
     {
-      "operation_id": "clear_cart_cart__user_id__delete",
+      "operation_id": "clear_cart",
       "method": "DELETE",
       "path": "/cart/{user_id}",
       "tool_name": "clear_cart",
-      "description": "Clear the cart for a specific user.",
+      "description": "Clear the cart for a user. Requires user_id.",
       "expose": true,
       "module": "cart_management",
       "safety_notes": []
     },
     {
-      "operation_id": "apply_coupon_cart__user_id__apply_coupon_post",
+      "operation_id": "apply_coupon",
       "method": "POST",
       "path": "/cart/{user_id}/apply-coupon",
       "tool_name": "apply_coupon",
-      "description": "Apply a coupon to a user's cart.",
+      "description": "Apply a coupon to a user's cart. Requires user_id.",
       "expose": true,
       "module": "cart_management",
       "safety_notes": []
     },
     {
-      "operation_id": "checkout_cart_cart__user_id__checkout_post",
+      "operation_id": "checkout_cart",
       "method": "POST",
       "path": "/cart/{user_id}/checkout",
       "tool_name": "checkout_cart",
-      "description": "Checkout the cart for a specific user.",
+      "description": "Checkout the cart for a user. Requires user_id.",
       "expose": true,
       "module": "cart_management",
       "safety_notes": []
     },
     {
-      "operation_id": "add_to_cart_cart__user_id__items_post",
+      "operation_id": "add_to_cart",
       "method": "POST",
       "path": "/cart/{user_id}/items",
       "tool_name": "add_to_cart",
-      "description": "Add an item to a user's cart.",
+      "description": "Add an item to a user's cart. Requires user_id.",
       "expose": true,
       "module": "cart_management",
       "safety_notes": []
     },
     {
-      "operation_id": "update_cart_item_cart__user_id__items__product_id__put",
+      "operation_id": "update_cart_item",
       "method": "PUT",
       "path": "/cart/{user_id}/items/{product_id}",
       "tool_name": "update_cart_item",
-      "description": "Update an item in a user's cart.",
+      "description": "Update an item in a user's cart. Requires user_id and product_id.",
       "expose": true,
       "module": "cart_management",
       "safety_notes": []
     },
     {
-      "operation_id": "remove_from_cart_cart__user_id__items__product_id__delete",
+      "operation_id": "remove_from_cart",
       "method": "DELETE",
       "path": "/cart/{user_id}/items/{product_id}",
       "tool_name": "remove_from_cart",
-      "description": "Remove an item from a user's cart.",
+      "description": "Remove an item from a user's cart. Requires user_id and product_id.",
       "expose": true,
       "module": "cart_management",
       "safety_notes": []
     },
     {
-      "operation_id": "get_cart_summary_cart__user_id__summary_get",
+      "operation_id": "get_cart_summary",
       "method": "GET",
       "path": "/cart/{user_id}/summary",
       "tool_name": "get_cart_summary",
-      "description": "Get a summary of a user's cart.",
+      "description": "Get a summary of a user's cart. Requires user_id.",
       "expose": true,
       "module": "cart_management",
       "safety_notes": []
     },
     {
-      "operation_id": "list_categories_categories_get",
+      "operation_id": "list_categories",
       "method": "GET",
       "path": "/categories",
       "tool_name": "list_categories",
@@ -303,7 +298,7 @@
       "safety_notes": []
     },
     {
-      "operation_id": "create_category_categories_post",
+      "operation_id": "create_category",
       "method": "POST",
       "path": "/categories",
       "tool_name": "create_category",
@@ -313,77 +308,77 @@
       "safety_notes": []
     },
     {
-      "operation_id": "get_category_categories__category_id__get",
+      "operation_id": "get_category",
       "method": "GET",
       "path": "/categories/{category_id}",
       "tool_name": "get_category",
-      "description": "Get a category by its ID.",
+      "description": "Get a category by its ID. Requires category_id.",
       "expose": true,
       "module": "product_catalog",
       "safety_notes": []
     },
     {
-      "operation_id": "get_category_products_categories__category_id__products_get",
+      "operation_id": "get_category_products",
       "method": "GET",
       "path": "/categories/{category_id}/products",
       "tool_name": "get_category_products",
-      "description": "Get products for a specific category.",
+      "description": "Get products for a specific category. Requires category_id.",
       "expose": true,
       "module": "product_catalog",
       "safety_notes": []
     },
     {
-      "operation_id": "list_coupons_coupons_get",
+      "operation_id": "list_coupons",
       "method": "GET",
       "path": "/coupons",
       "tool_name": "list_coupons",
       "description": "List all coupons.",
       "expose": true,
-      "module": "coupon_management",
+      "module": "promotion_management",
       "safety_notes": []
     },
     {
-      "operation_id": "create_coupon_coupons_post",
+      "operation_id": "create_coupon",
       "method": "POST",
       "path": "/coupons",
       "tool_name": "create_coupon",
       "description": "Create a new coupon.",
       "expose": true,
-      "module": "coupon_management",
+      "module": "promotion_management",
       "safety_notes": []
     },
     {
-      "operation_id": "validate_coupon_coupons_validate_post",
+      "operation_id": "validate_coupon",
       "method": "POST",
       "path": "/coupons/validate",
       "tool_name": "validate_coupon",
       "description": "Validate a coupon.",
       "expose": true,
-      "module": "coupon_management",
+      "module": "promotion_management",
       "safety_notes": []
     },
     {
-      "operation_id": "get_coupon_coupons__coupon_id__get",
+      "operation_id": "get_coupon",
       "method": "GET",
       "path": "/coupons/{coupon_id}",
       "tool_name": "get_coupon",
-      "description": "Get a coupon by its ID.",
+      "description": "Get a coupon by its ID. Requires coupon_id.",
       "expose": true,
-      "module": "coupon_management",
+      "module": "promotion_management",
       "safety_notes": []
     },
     {
-      "operation_id": "delete_coupon_coupons__coupon_id__delete",
+      "operation_id": "delete_coupon",
       "method": "DELETE",
       "path": "/coupons/{coupon_id}",
       "tool_name": "delete_coupon",
-      "description": "Delete a coupon by its ID.",
+      "description": "Delete a coupon by its ID. Requires coupon_id.",
       "expose": true,
-      "module": "coupon_management",
+      "module": "promotion_management",
       "safety_notes": []
     },
     {
-      "operation_id": "health_check_health_get",
+      "operation_id": "health_check",
       "method": "GET",
       "path": "/health",
       "tool_name": "health_check",
@@ -393,449 +388,449 @@
       "safety_notes": []
     },
     {
-      "operation_id": "list_inventory_inventory_get",
+      "operation_id": "list_inventory",
       "method": "GET",
       "path": "/inventory",
       "tool_name": "list_inventory",
-      "description": "List all inventory items.",
+      "description": "Lists all inventory items.",
       "expose": true,
       "module": "inventory_management",
       "safety_notes": []
     },
     {
-      "operation_id": "get_inventory_alerts_inventory_alerts_get",
+      "operation_id": "get_inventory_alerts",
       "method": "GET",
       "path": "/inventory/alerts",
       "tool_name": "get_inventory_alerts",
-      "description": "Get alerts related to inventory levels.",
+      "description": "Retrieves inventory alerts.",
       "expose": true,
       "module": "inventory_management",
       "safety_notes": []
     },
     {
-      "operation_id": "get_inventory_report_inventory_report_get",
+      "operation_id": "get_inventory_report",
       "method": "GET",
       "path": "/inventory/report",
       "tool_name": "get_inventory_report",
-      "description": "Get a report on current inventory status.",
+      "description": "Retrieves a report of the current inventory.",
       "expose": true,
       "module": "inventory_management",
       "safety_notes": []
     },
     {
-      "operation_id": "get_inventory_inventory__product_id__get",
+      "operation_id": "get_inventory",
       "method": "GET",
       "path": "/inventory/{product_id}",
       "tool_name": "get_inventory",
-      "description": "Get inventory details for a specific product by product ID.",
+      "description": "Retrieves inventory for a specific product by product ID.",
       "expose": true,
       "module": "inventory_management",
       "safety_notes": []
     },
     {
-      "operation_id": "update_inventory_inventory__product_id__put",
+      "operation_id": "update_inventory",
       "method": "PUT",
       "path": "/inventory/{product_id}",
       "tool_name": "update_inventory",
-      "description": "Update inventory information for a specific product by product ID.",
+      "description": "Updates inventory for a specific product by product ID.",
       "expose": true,
       "module": "inventory_management",
       "safety_notes": []
     },
     {
-      "operation_id": "adjust_inventory_inventory__product_id__adjust_post",
+      "operation_id": "adjust_inventory",
       "method": "POST",
       "path": "/inventory/{product_id}/adjust",
       "tool_name": "adjust_inventory",
-      "description": "Adjust the inventory level for a product by product ID.",
+      "description": "Adjusts the inventory level for a specific product by product ID.",
       "expose": true,
       "module": "inventory_management",
       "safety_notes": []
     },
     {
-      "operation_id": "release_inventory_inventory__product_id__release_post",
+      "operation_id": "release_inventory",
       "method": "POST",
       "path": "/inventory/{product_id}/release",
       "tool_name": "release_inventory",
-      "description": "Release reserved inventory for a product by product ID.",
+      "description": "Releases reserved inventory for a specific product by product ID.",
       "expose": true,
       "module": "inventory_management",
       "safety_notes": []
     },
     {
-      "operation_id": "reserve_inventory_inventory__product_id__reserve_post",
+      "operation_id": "reserve_inventory",
       "method": "POST",
       "path": "/inventory/{product_id}/reserve",
       "tool_name": "reserve_inventory",
-      "description": "Reserve inventory for a product by product ID.",
+      "description": "Reserves inventory for a specific product by product ID.",
       "expose": true,
       "module": "inventory_management",
       "safety_notes": []
     },
     {
-      "operation_id": "get_user_notifications_notifications__user_id__get",
+      "operation_id": "get_user_notifications",
       "method": "GET",
       "path": "/notifications/{user_id}",
       "tool_name": "get_user_notifications",
-      "description": "Get notifications for a specific user by user ID.",
+      "description": "Retrieves notifications for a specific user by user ID.",
       "expose": true,
       "module": "notification_management",
       "safety_notes": []
     },
     {
-      "operation_id": "create_notification_notifications__user_id__post",
+      "operation_id": "create_notification",
       "method": "POST",
       "path": "/notifications/{user_id}",
       "tool_name": "create_notification",
-      "description": "Create a new notification for a specific user by user ID.",
+      "description": "Creates a new notification for a specific user by user ID.",
       "expose": true,
       "module": "notification_management",
       "safety_notes": []
     },
     {
-      "operation_id": "mark_all_read_notifications__user_id__mark_all_read_post",
+      "operation_id": "mark_all_read",
       "method": "POST",
       "path": "/notifications/{user_id}/mark-all-read",
       "tool_name": "mark_all_read",
-      "description": "Mark all notifications as read for a specific user by user ID.",
+      "description": "Marks all notifications as read for a specific user by user ID.",
       "expose": true,
       "module": "notification_management",
       "safety_notes": []
     },
     {
-      "operation_id": "delete_notification_notifications__user_id___notification_id__delete",
+      "operation_id": "delete_notification",
       "method": "DELETE",
       "path": "/notifications/{user_id}/{notification_id}",
       "tool_name": "delete_notification",
-      "description": "Delete a specific notification for a user by user ID and notification ID.",
+      "description": "Deletes a specific notification for a user by user ID and notification ID.",
       "expose": true,
       "module": "notification_management",
       "safety_notes": []
     },
     {
-      "operation_id": "mark_notification_read_notifications__user_id___notification_id__read_put",
+      "operation_id": "mark_notification_read",
       "method": "PUT",
       "path": "/notifications/{user_id}/{notification_id}/read",
       "tool_name": "mark_notification_read",
-      "description": "Mark a specific notification as read for a user by user ID and notification ID.",
+      "description": "Marks a specific notification as read for a user by user ID and notification ID.",
       "expose": true,
       "module": "notification_management",
       "safety_notes": []
     },
     {
-      "operation_id": "list_orders_orders_get",
+      "operation_id": "list_orders",
       "method": "GET",
       "path": "/orders",
       "tool_name": "list_orders",
-      "description": "List all orders.",
+      "description": "Lists all orders.",
       "expose": true,
       "module": "order_management",
       "safety_notes": []
     },
     {
-      "operation_id": "create_order_orders_post",
+      "operation_id": "create_order",
       "method": "POST",
       "path": "/orders",
       "tool_name": "create_order",
-      "description": "Create a new order.",
+      "description": "Creates a new order.",
       "expose": true,
       "module": "order_management",
       "safety_notes": []
     },
     {
-      "operation_id": "get_order_orders__order_id__get",
+      "operation_id": "get_order",
       "method": "GET",
       "path": "/orders/{order_id}",
       "tool_name": "get_order",
-      "description": "Get details for a specific order by order ID.",
+      "description": "Retrieves a specific order by order ID.",
       "expose": true,
       "module": "order_management",
       "safety_notes": []
     },
     {
-      "operation_id": "cancel_order_orders__order_id__cancel_post",
+      "operation_id": "cancel_order",
       "method": "POST",
       "path": "/orders/{order_id}/cancel",
       "tool_name": "cancel_order",
-      "description": "Cancel a specific order by order ID.",
+      "description": "Cancels a specific order by order ID.",
       "expose": true,
       "module": "order_management",
       "safety_notes": []
     },
     {
-      "operation_id": "get_order_invoice_orders__order_id__invoice_get",
+      "operation_id": "get_order_invoice",
       "method": "GET",
       "path": "/orders/{order_id}/invoice",
       "tool_name": "get_order_invoice",
-      "description": "Get the invoice for a specific order by order ID.",
+      "description": "Retrieves the invoice for a specific order by order ID.",
       "expose": true,
       "module": "order_management",
       "safety_notes": []
     },
     {
-      "operation_id": "get_order_items_orders__order_id__items_get",
+      "operation_id": "get_order_items",
       "method": "GET",
       "path": "/orders/{order_id}/items",
       "tool_name": "get_order_items",
-      "description": "Get the items included in a specific order by order ID.",
+      "description": "Retrieves the items for a specific order by order ID.",
       "expose": true,
       "module": "order_management",
       "safety_notes": []
     },
     {
-      "operation_id": "get_order_payment_orders__order_id__payment_get",
+      "operation_id": "get_order_payment",
       "method": "GET",
       "path": "/orders/{order_id}/payment",
       "tool_name": "get_order_payment",
-      "description": "Get payment information for a specific order by order ID.",
+      "description": "Retrieves the payment information for a specific order by order ID.",
       "expose": true,
       "module": "order_management",
       "safety_notes": []
     },
     {
-      "operation_id": "refund_order_orders__order_id__refund_post",
+      "operation_id": "refund_order",
       "method": "POST",
       "path": "/orders/{order_id}/refund",
       "tool_name": "refund_order",
-      "description": "Refund a specific order by order ID.",
+      "description": "Refunds a specific order by order ID.",
       "expose": true,
       "module": "order_management",
       "safety_notes": []
     },
     {
-      "operation_id": "reorder_orders__order_id__reorder_post",
+      "operation_id": "reorder",
       "method": "POST",
       "path": "/orders/{order_id}/reorder",
       "tool_name": "reorder",
-      "description": "Reorder a specific order by order ID.",
+      "description": "Reorders a specific order by order ID.",
       "expose": true,
       "module": "order_management",
       "safety_notes": []
     },
     {
-      "operation_id": "get_order_shipment_orders__order_id__shipment_get",
+      "operation_id": "get_order_shipment",
       "method": "GET",
       "path": "/orders/{order_id}/shipment",
       "tool_name": "get_order_shipment",
-      "description": "Get shipment details for a specific order by order ID.",
+      "description": "Retrieves the shipment information for a specific order by order ID.",
       "expose": true,
       "module": "order_management",
       "safety_notes": []
     },
     {
-      "operation_id": "update_order_status_orders__order_id__status_put",
+      "operation_id": "update_order_status",
       "method": "PUT",
       "path": "/orders/{order_id}/status",
       "tool_name": "update_order_status",
-      "description": "Update the status of a specific order by order ID.",
+      "description": "Updates the status of a specific order by order ID.",
       "expose": true,
       "module": "order_management",
       "safety_notes": []
     },
     {
-      "operation_id": "get_order_tracking_orders__order_id__tracking_get",
+      "operation_id": "get_order_tracking",
       "method": "GET",
       "path": "/orders/{order_id}/tracking",
       "tool_name": "get_order_tracking",
-      "description": "Get tracking information for a specific order by order ID.",
+      "description": "Retrieves the tracking information for a specific order by order ID.",
       "expose": true,
       "module": "order_management",
       "safety_notes": []
     },
     {
-      "operation_id": "list_payments_payments_get",
+      "operation_id": "list_payments",
       "method": "GET",
       "path": "/payments",
       "tool_name": "list_payments",
-      "description": "List all payments.",
+      "description": "Lists all payments.",
       "expose": true,
       "module": "payment_processing",
       "safety_notes": []
     },
     {
-      "operation_id": "create_payment_payments_post",
+      "operation_id": "create_payment",
       "method": "POST",
       "path": "/payments",
       "tool_name": "create_payment",
-      "description": "Create a new payment.",
+      "description": "Creates a new payment.",
       "expose": true,
       "module": "payment_processing",
       "safety_notes": []
     },
     {
-      "operation_id": "list_payment_methods_payments_methods_get",
+      "operation_id": "list_payment_methods",
       "method": "GET",
       "path": "/payments/methods",
       "tool_name": "list_payment_methods",
-      "description": "List available payment methods.",
+      "description": "Lists available payment methods.",
       "expose": true,
       "module": "payment_processing",
       "safety_notes": []
     },
     {
-      "operation_id": "validate_card_payments_validate_card_post",
+      "operation_id": "validate_card",
       "method": "POST",
       "path": "/payments/validate-card",
       "tool_name": "validate_card",
-      "description": "Validate a credit card.",
+      "description": "Validates a credit card.",
       "expose": true,
       "module": "payment_processing",
       "safety_notes": []
     },
     {
-      "operation_id": "get_payment_payments__payment_id__get",
+      "operation_id": "get_payment",
       "method": "GET",
       "path": "/payments/{payment_id}",
       "tool_name": "get_payment",
-      "description": "Get details for a specific payment by payment ID.",
+      "description": "Retrieves a specific payment by payment ID.",
       "expose": true,
       "module": "payment_processing",
       "safety_notes": []
     },
     {
-      "operation_id": "capture_payment_payments__payment_id__capture_post",
+      "operation_id": "capture_payment",
       "method": "POST",
       "path": "/payments/{payment_id}/capture",
       "tool_name": "capture_payment",
       "description": "Capture a payment by payment ID.",
       "expose": true,
-      "module": "payment_processing",
+      "module": "payment_management",
       "safety_notes": []
     },
     {
-      "operation_id": "refund_payment_payments__payment_id__refund_post",
+      "operation_id": "refund_payment",
       "method": "POST",
       "path": "/payments/{payment_id}/refund",
       "tool_name": "refund_payment",
       "description": "Refund a payment by payment ID.",
       "expose": true,
-      "module": "payment_processing",
+      "module": "payment_management",
       "safety_notes": []
     },
     {
-      "operation_id": "void_payment_payments__payment_id__void_post",
+      "operation_id": "void_payment",
       "method": "POST",
       "path": "/payments/{payment_id}/void",
       "tool_name": "void_payment",
       "description": "Void a payment by payment ID.",
       "expose": true,
-      "module": "payment_processing",
+      "module": "payment_management",
       "safety_notes": []
     },
     {
-      "operation_id": "list_products_products_get",
+      "operation_id": "list_products",
       "method": "GET",
       "path": "/products",
       "tool_name": "list_products",
       "description": "List all products.",
       "expose": true,
-      "module": "product_management",
+      "module": "product_catalog",
       "safety_notes": []
     },
     {
-      "operation_id": "create_product_products_post",
+      "operation_id": "create_product",
       "method": "POST",
       "path": "/products",
       "tool_name": "create_product",
       "description": "Create a new product.",
       "expose": true,
-      "module": "product_management",
+      "module": "product_catalog",
       "safety_notes": []
     },
     {
-      "operation_id": "get_bestsellers_products_bestsellers_get",
+      "operation_id": "get_bestsellers",
       "method": "GET",
       "path": "/products/bestsellers",
       "tool_name": "get_bestsellers",
       "description": "Get a list of best-selling products.",
       "expose": true,
-      "module": "product_management",
+      "module": "product_catalog",
       "safety_notes": []
     },
     {
-      "operation_id": "get_featured_products_products_featured_get",
+      "operation_id": "get_featured_products",
       "method": "GET",
       "path": "/products/featured",
       "tool_name": "get_featured_products",
       "description": "Get a list of featured products.",
       "expose": true,
-      "module": "product_management",
+      "module": "product_catalog",
       "safety_notes": []
     },
     {
-      "operation_id": "get_new_arrivals_products_new_arrivals_get",
+      "operation_id": "get_new_arrivals",
       "method": "GET",
       "path": "/products/new-arrivals",
       "tool_name": "get_new_arrivals",
       "description": "Get a list of new arrival products.",
       "expose": true,
-      "module": "product_management",
+      "module": "product_catalog",
       "safety_notes": []
     },
     {
-      "operation_id": "get_product_products__product_id__get",
+      "operation_id": "get_product",
       "method": "GET",
       "path": "/products/{product_id}",
       "tool_name": "get_product",
       "description": "Get a product by product ID.",
       "expose": true,
-      "module": "product_management",
+      "module": "product_catalog",
       "safety_notes": []
     },
     {
-      "operation_id": "update_product_products__product_id__put",
+      "operation_id": "update_product",
       "method": "PUT",
       "path": "/products/{product_id}",
       "tool_name": "update_product",
       "description": "Update a product by product ID.",
       "expose": true,
-      "module": "product_management",
+      "module": "product_catalog",
       "safety_notes": []
     },
     {
-      "operation_id": "delete_product_products__product_id__delete",
+      "operation_id": "delete_product",
       "method": "DELETE",
       "path": "/products/{product_id}",
       "tool_name": "delete_product",
       "description": "Delete a product by product ID.",
       "expose": true,
-      "module": "product_management",
+      "module": "product_catalog",
       "safety_notes": [
         "Potentially dangerous operation: Deletes product data."
       ]
     },
     {
-      "operation_id": "get_related_products_products__product_id__related_get",
+      "operation_id": "get_related_products",
       "method": "GET",
       "path": "/products/{product_id}/related",
       "tool_name": "get_related_products",
-      "description": "Get a list of related products for a given product ID.",
+      "description": "Get related products for a given product ID.",
       "expose": true,
-      "module": "product_management",
+      "module": "product_catalog",
       "safety_notes": []
     },
     {
-      "operation_id": "get_product_reviews_products__product_id__reviews_get",
+      "operation_id": "get_product_reviews",
       "method": "GET",
       "path": "/products/{product_id}/reviews",
       "tool_name": "get_product_reviews",
-      "description": "Get reviews for a product by product ID.",
+      "description": "Get reviews for a given product ID.",
       "expose": true,
-      "module": "product_management",
+      "module": "product_catalog",
       "safety_notes": []
     },
     {
-      "operation_id": "create_product_review_products__product_id__reviews_post",
+      "operation_id": "create_product_review",
       "method": "POST",
       "path": "/products/{product_id}/reviews",
       "tool_name": "create_product_review",
-      "description": "Create a review for a product by product ID.",
+      "description": "Create a new review for a given product ID.",
       "expose": true,
-      "module": "product_management",
+      "module": "product_catalog",
       "safety_notes": []
     },
     {
-      "operation_id": "list_promotions_promotions_get",
+      "operation_id": "list_promotions",
       "method": "GET",
       "path": "/promotions",
       "tool_name": "list_promotions",
@@ -845,7 +840,7 @@
       "safety_notes": []
     },
     {
-      "operation_id": "get_promotion_promotions__promo_id__get",
+      "operation_id": "get_promotion",
       "method": "GET",
       "path": "/promotions/{promo_id}",
       "tool_name": "get_promotion",
@@ -855,7 +850,7 @@
       "safety_notes": []
     },
     {
-      "operation_id": "get_promotion_products_promotions__promo_id__products_get",
+      "operation_id": "get_promotion_products",
       "method": "GET",
       "path": "/promotions/{promo_id}/products",
       "tool_name": "get_promotion_products",
@@ -865,7 +860,7 @@
       "safety_notes": []
     },
     {
-      "operation_id": "list_shipments_shipments_get",
+      "operation_id": "list_shipments",
       "method": "GET",
       "path": "/shipments",
       "tool_name": "list_shipments",
@@ -875,7 +870,7 @@
       "safety_notes": []
     },
     {
-      "operation_id": "create_shipment_shipments_post",
+      "operation_id": "create_shipment",
       "method": "POST",
       "path": "/shipments",
       "tool_name": "create_shipment",
@@ -885,7 +880,7 @@
       "safety_notes": []
     },
     {
-      "operation_id": "get_shipment_shipments__shipment_id__get",
+      "operation_id": "get_shipment",
       "method": "GET",
       "path": "/shipments/{shipment_id}",
       "tool_name": "get_shipment",
@@ -895,7 +890,7 @@
       "safety_notes": []
     },
     {
-      "operation_id": "generate_shipping_label_shipments__shipment_id__label_post",
+      "operation_id": "generate_shipping_label",
       "method": "POST",
       "path": "/shipments/{shipment_id}/label",
       "tool_name": "generate_shipping_label",
@@ -905,7 +900,7 @@
       "safety_notes": []
     },
     {
-      "operation_id": "update_shipment_status_shipments__shipment_id__status_put",
+      "operation_id": "update_shipment_status",
       "method": "PUT",
       "path": "/shipments/{shipment_id}/status",
       "tool_name": "update_shipment_status",
@@ -915,7 +910,7 @@
       "safety_notes": []
     },
     {
-      "operation_id": "get_shipment_tracking_shipments__shipment_id__tracking_get",
+      "operation_id": "get_shipment_tracking",
       "method": "GET",
       "path": "/shipments/{shipment_id}/tracking",
       "tool_name": "get_shipment_tracking",
@@ -925,7 +920,7 @@
       "safety_notes": []
     },
     {
-      "operation_id": "list_carriers_shipping_carriers_get",
+      "operation_id": "list_carriers",
       "method": "GET",
       "path": "/shipping/carriers",
       "tool_name": "list_carriers",
@@ -935,7 +930,7 @@
       "safety_notes": []
     },
     {
-      "operation_id": "estimate_delivery_shipping_estimate_get",
+      "operation_id": "estimate_delivery",
       "method": "GET",
       "path": "/shipping/estimate",
       "tool_name": "estimate_delivery",
@@ -945,7 +940,7 @@
       "safety_notes": []
     },
     {
-      "operation_id": "get_shipping_rates_shipping_rates_get",
+      "operation_id": "get_shipping_rates",
       "method": "GET",
       "path": "/shipping/rates",
       "tool_name": "get_shipping_rates",
@@ -955,7 +950,7 @@
       "safety_notes": []
     },
     {
-      "operation_id": "validate_address_shipping_validate_address_post",
+      "operation_id": "validate_address",
       "method": "POST",
       "path": "/shipping/validate-address",
       "tool_name": "validate_address",
@@ -965,87 +960,87 @@
       "safety_notes": []
     },
     {
-      "operation_id": "get_contact_info_support_contact_get",
+      "operation_id": "get_contact_info",
       "method": "GET",
       "path": "/support/contact",
       "tool_name": "get_contact_info",
-      "description": "Get contact information for customer support.",
+      "description": "Get contact information for support.",
       "expose": true,
-      "module": "customer_support",
+      "module": "support_operations",
       "safety_notes": []
     },
     {
-      "operation_id": "list_faq_support_faq_get",
+      "operation_id": "list_faq",
       "method": "GET",
       "path": "/support/faq",
       "tool_name": "list_faq",
       "description": "List frequently asked questions.",
       "expose": true,
-      "module": "customer_support",
+      "module": "support_operations",
       "safety_notes": []
     },
     {
-      "operation_id": "list_tickets_support_tickets_get",
+      "operation_id": "list_tickets",
       "method": "GET",
       "path": "/support/tickets",
       "tool_name": "list_tickets",
       "description": "List support tickets.",
       "expose": true,
-      "module": "customer_support",
+      "module": "support_operations",
       "safety_notes": []
     },
     {
-      "operation_id": "create_ticket_support_tickets_post",
+      "operation_id": "create_ticket",
       "method": "POST",
       "path": "/support/tickets",
-      "tool_name": "create_support_ticket",
+      "tool_name": "create_ticket",
       "description": "Create a new support ticket.",
       "expose": true,
       "module": "support_ticket_management",
       "safety_notes": []
     },
     {
-      "operation_id": "get_ticket_support_tickets__ticket_id__get",
+      "operation_id": "get_ticket",
       "method": "GET",
       "path": "/support/tickets/{ticket_id}",
-      "tool_name": "get_support_ticket",
-      "description": "Retrieve a support ticket by its ticket_id.",
+      "tool_name": "get_ticket",
+      "description": "Retrieve a specific support ticket by its ID.",
       "expose": true,
       "module": "support_ticket_management",
       "safety_notes": []
     },
     {
-      "operation_id": "close_ticket_support_tickets__ticket_id__close_post",
+      "operation_id": "close_ticket",
       "method": "POST",
       "path": "/support/tickets/{ticket_id}/close",
-      "tool_name": "close_support_ticket",
-      "description": "Close a support ticket by its ticket_id.",
+      "tool_name": "close_ticket",
+      "description": "Close a support ticket by its ID.",
       "expose": true,
       "module": "support_ticket_management",
       "safety_notes": []
     },
     {
-      "operation_id": "reply_to_ticket_support_tickets__ticket_id__reply_post",
+      "operation_id": "reply_to_ticket",
       "method": "POST",
       "path": "/support/tickets/{ticket_id}/reply",
-      "tool_name": "reply_support_ticket",
-      "description": "Reply to a support ticket by its ticket_id.",
+      "tool_name": "reply_to_ticket",
+      "description": "Reply to a support ticket by its ID.",
       "expose": true,
       "module": "support_ticket_management",
       "safety_notes": []
     },
     {
-      "operation_id": "update_ticket_status_support_tickets__ticket_id__status_put",
+      "operation_id": "update_ticket_status",
       "method": "PUT",
       "path": "/support/tickets/{ticket_id}/status",
-      "tool_name": "update_support_ticket_status",
-      "description": "Update the status of a support ticket by its ticket_id.",
+      "tool_name": "update_ticket_status",
+      "description": "Update the status of a support ticket by its ID.",
       "expose": true,
       "module": "support_ticket_management",
       "safety_notes": []
     },
     {
-      "operation_id": "list_users_users_get",
+      "operation_id": "list_users",
       "method": "GET",
       "path": "/users",
       "tool_name": "list_users",
@@ -1055,7 +1050,7 @@
       "safety_notes": []
     },
     {
-      "operation_id": "create_user_users_post",
+      "operation_id": "create_user",
       "method": "POST",
       "path": "/users",
       "tool_name": "create_user",
@@ -1065,81 +1060,83 @@
       "safety_notes": []
     },
     {
-      "operation_id": "get_user_users__user_id__get",
+      "operation_id": "get_user",
       "method": "GET",
       "path": "/users/{user_id}",
       "tool_name": "get_user",
-      "description": "Retrieve a user by their user_id.",
+      "description": "Retrieve a specific user by their ID.",
       "expose": true,
       "module": "user_management",
       "safety_notes": []
     },
     {
-      "operation_id": "update_user_users__user_id__put",
+      "operation_id": "update_user",
       "method": "PUT",
       "path": "/users/{user_id}",
       "tool_name": "update_user",
-      "description": "Update a user by their user_id.",
+      "description": "Update a user's information by their ID.",
       "expose": true,
       "module": "user_management",
       "safety_notes": []
     },
     {
-      "operation_id": "delete_user_users__user_id__delete",
+      "operation_id": "delete_user",
       "method": "DELETE",
       "path": "/users/{user_id}",
       "tool_name": "delete_user",
-      "description": "Delete a user by their user_id.",
+      "description": "Delete a user by their ID.",
       "expose": true,
       "module": "user_management",
-      "safety_notes": []
+      "safety_notes": [
+        "Potentially dangerous operation: Deletes user data."
+      ]
     },
     {
-      "operation_id": "get_user_addresses_users__user_id__addresses_get",
+      "operation_id": "get_user_addresses",
       "method": "GET",
       "path": "/users/{user_id}/addresses",
       "tool_name": "get_user_addresses",
-      "description": "Retrieve the addresses of a user by their user_id.",
+      "description": "Retrieve the addresses for a specific user by their ID.",
       "expose": true,
       "module": "user_management",
       "safety_notes": []
     },
     {
-      "operation_id": "get_user_orders_users__user_id__orders_get",
+      "operation_id": "get_user_orders",
       "method": "GET",
       "path": "/users/{user_id}/orders",
       "tool_name": "get_user_orders",
-      "description": "Retrieve the orders of a user by their user_id.",
+      "description": "Retrieve the orders for a specific user by their ID.",
       "expose": true,
       "module": "user_management",
       "safety_notes": []
     },
     {
-      "operation_id": "get_user_reviews_users__user_id__reviews_get",
+      "operation_id": "get_user_reviews",
       "method": "GET",
       "path": "/users/{user_id}/reviews",
       "tool_name": "get_user_reviews",
-      "description": "Retrieve the reviews of a user by their user_id.",
+      "description": "Retrieve the reviews for a specific user by their ID.",
       "expose": true,
       "module": "user_management",
       "safety_notes": []
     },
     {
-      "operation_id": "get_user_wishlist_users__user_id__wishlist_get",
+      "operation_id": "get_user_wishlist",
       "method": "GET",
       "path": "/users/{user_id}/wishlist",
       "tool_name": "get_user_wishlist",
-      "description": "Retrieve the wishlist of a user by their user_id.",
+      "description": "Retrieve the wishlist for a specific user by their ID.",
       "expose": true,
       "module": "user_management",
       "safety_notes": []
     },
     {
-      "operation_id": "add_to_wishlist_users__user_id__wishlist__product_id__post",
+      "operation_id": "add_to_wishlist",
       "method": "POST",
       "path": "/users/{user_id}/wishlist/{product_id}",
       "tool_name": "add_to_wishlist",
-      "description": "Add a product to a user's wishlist by their user_id and product_id.",
+      "description": "Add a product to a user's wishlist by their ID and the product ID.",
       "expose": true,
       "module": "user_management",
       "safety_notes": []
@@ -1148,8 +1145,8 @@
   "provenance": {
     "planner_model": "gemini-2.0-flash",
     "planner_provider": "gemini",
-    "generated_at": "2025-12-30T17:28:16.518340Z",
-    "spec_hash": "07cdcb8c92a551bd",
+    "generated_at": "2026-01-03T20:30:58.401128Z",
+    "spec_hash": "3b80cd9a3d5b5e4d",
     "config_hash": ""
   }
 }

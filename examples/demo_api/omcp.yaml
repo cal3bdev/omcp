@@ -14,8 +14,10 @@ mode: single
 
 # Server settings
 server:
-  transport: stdio
+  transport: http
   name: "task-manager-mcp"
+  host: "127.0.0.1"
+  port: 9000
 
 # Endpoint filtering (optional - expose everything for demo)
 endpoints:

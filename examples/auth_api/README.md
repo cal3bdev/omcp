@@ -18,35 +18,52 @@ This example demonstrates OMCP's dynamic authentication feature, where clients p
 
 ## Quick Start
 
-### 1. Start the Notes API
+### One Command (Recommended)
 
 ```bash
-uv run uvicorn examples.auth_api.main:app --port 8080
+# Start everything: Notes API + OMCP + Chainlit Web UI
+uv run python examples/auth_api/start.py --ui
+
+# Open http://localhost:8000 in your browser
 ```
 
-### 2. Start OMCP with Dynamic Auth
+This starts:
+- **Notes API** at http://localhost:8080
+- **OMCP Server** at http://localhost:9000
+- **Chainlit UI** at http://localhost:8000
+
+### Chainlit Web UI Features
+
+- **User Profile Selector** - Switch between Alice (admin), Bob, or Charlie
+- **Streaming Responses** - See AI responses as they're generated
+- **Tool Call Visualization** - Watch MCP tools being invoked in real-time
+- **Google ADK Integration** - Uses Gemini 2.0 Flash with McpToolset
+
+### Alternative: Terminal Client
 
 ```bash
-uv run omcp serve --config examples/auth_api/omcp.yaml
-```
+# Start servers only (no UI)
+uv run python examples/auth_api/start.py
 
-### 3. Run the Agent Client
-
-```bash
-# Run as alice (admin)
+# In another terminal, run as alice (admin)
 uv run python examples/auth_api/client.py --user alice
 
-# Run as bob (regular user)
+# Or as bob/charlie (regular users)
 uv run python examples/auth_api/client.py --user bob
-
-# Run as charlie
-uv run python examples/auth_api/client.py -u charlie
 ```
 
-The client will:
-- Authenticate as the specified user
-- Connect to OMCP with the JWT token
-- Start an interactive AI agent session
+### Manual Server Setup
+
+```bash
+# Terminal 1: Notes API
+uv run uvicorn examples.auth_api.main:app --port 8080
+
+# Terminal 2: OMCP
+uv run omcp serve --config examples/auth_api/omcp.yaml
+
+# Terminal 3: Chainlit UI (optional)
+uv run chainlit run examples/auth_api/app.py
+```
 
 ## Test Users
 
