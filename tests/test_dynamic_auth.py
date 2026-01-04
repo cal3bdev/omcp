@@ -3,18 +3,19 @@
 from __future__ import annotations
 
 import pytest
-from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock
 
 from omcp.auth.context import AuthContext, TokenClaims
 from omcp.auth.dynamic import (
     DynamicAuth,
+    auth_context_scope,
     create_dynamic_auth,
     get_current_auth_context,
+    reset_auth_context,
     set_current_auth_context,
 )
 from omcp.auth.errors import (
-    AuthError,
     InvalidAuthSchemeError,
     InvalidTokenError,
     MissingAuthError,
@@ -27,7 +28,6 @@ from omcp.config.models import (
     AuthConfig,
     AuthHeaderConfig,
     AuthType,
-    DevModeConfig,
     JWTValidationConfig,
 )
 
@@ -172,18 +172,69 @@ class TestContextVariable:
         """Test setting and getting auth context."""
         ctx = AuthContext(token="test-token", validated=False)
 
-        set_current_auth_context(ctx)
-        retrieved = get_current_auth_context()
+        token = set_current_auth_context(ctx)
+        try:
+            retrieved = get_current_auth_context()
 
-        assert retrieved is ctx
-        assert retrieved.token == "test-token"
-
-        # Clean up
-        set_current_auth_context(None)
+            assert retrieved is ctx
+            assert retrieved.token == "test-token"
+        finally:
+            # Proper cleanup using reset
+            reset_auth_context(token)
 
     def test_default_context_is_none(self):
         """Test default context is None."""
-        set_current_auth_context(None)
+        token = set_current_auth_context(None)
+        try:
+            assert get_current_auth_context() is None
+        finally:
+            reset_auth_context(token)
+
+    def test_context_scope_manager(self):
+        """Test auth_context_scope context manager."""
+        ctx = AuthContext(token="scoped-token", validated=False)
+
+        # Verify context is None before
+        assert get_current_auth_context() is None
+
+        with auth_context_scope(ctx):
+            # Context is set inside scope
+            retrieved = get_current_auth_context()
+            assert retrieved is ctx
+            assert retrieved.token == "scoped-token"
+
+        # Context is reset after scope
+        assert get_current_auth_context() is None
+
+    def test_context_scope_restores_previous_value(self):
+        """Test that context manager restores previous value, not just None."""
+        outer_ctx = AuthContext(token="outer-token", validated=False)
+        inner_ctx = AuthContext(token="inner-token", validated=False)
+
+        outer_token = set_current_auth_context(outer_ctx)
+        try:
+            assert get_current_auth_context() is outer_ctx
+
+            with auth_context_scope(inner_ctx):
+                assert get_current_auth_context() is inner_ctx
+
+            # Should restore to outer context, not None
+            assert get_current_auth_context() is outer_ctx
+        finally:
+            reset_auth_context(outer_token)
+
+    def test_context_scope_cleanup_on_exception(self):
+        """Test that context is properly reset even when exception occurs."""
+        ctx = AuthContext(token="exception-test", validated=False)
+
+        assert get_current_auth_context() is None
+
+        with pytest.raises(ValueError):
+            with auth_context_scope(ctx):
+                assert get_current_auth_context() is ctx
+                raise ValueError("Test exception")
+
+        # Context should be reset despite exception
         assert get_current_auth_context() is None
 
 
@@ -193,7 +244,6 @@ class TestDynamicAuth:
     def create_config(
         self,
         validation_enabled: bool = False,
-        dev_mode_enabled: bool = False,
         scheme: str = "Bearer",
     ) -> AuthConfig:
         """Create test auth config."""
@@ -201,7 +251,6 @@ class TestDynamicAuth:
             type=AuthType.JWT,
             validation=JWTValidationConfig(enabled=validation_enabled),
             header=AuthHeaderConfig(name="Authorization", scheme=scheme),
-            dev_mode=DevModeConfig(enabled=dev_mode_enabled, token_env="TEST_TOKEN"),
         )
 
     def test_extract_token_success(self):
@@ -212,17 +261,8 @@ class TestDynamicAuth:
         token = auth.extract_token("Bearer my-token")
         assert token == "my-token"
 
-    def test_extract_token_missing_uses_dev_mode(self):
-        """Test dev mode fallback when no header."""
-        config = self.create_config(dev_mode_enabled=True)
-
-        with patch.dict("os.environ", {"TEST_TOKEN": "dev-token"}):
-            auth = DynamicAuth(config)
-            token = auth.extract_token(None)
-            assert token == "dev-token"
-
-    def test_extract_token_missing_no_dev_mode_raises(self):
-        """Test missing token without dev mode raises error."""
+    def test_extract_token_missing_raises(self):
+        """Test missing token raises error."""
         config = self.create_config()
         auth = DynamicAuth(config)
 
@@ -267,23 +307,25 @@ class TestDynamicAuth:
 
         # Set context
         ctx = AuthContext(token="test-token", validated=False)
-        set_current_auth_context(ctx)
+        token = set_current_auth_context(ctx)
 
         try:
             headers = auth.get_headers_sync()
             assert headers == {"Authorization": "Bearer test-token"}
         finally:
-            set_current_auth_context(None)
+            reset_auth_context(token)
 
     def test_get_headers_no_context(self):
         """Test headers when no context set."""
         config = self.create_config()
         auth = DynamicAuth(config)
 
-        set_current_auth_context(None)
-        headers = auth.get_headers_sync()
-
-        assert headers == {}
+        token = set_current_auth_context(None)
+        try:
+            headers = auth.get_headers_sync()
+            assert headers == {}
+        finally:
+            reset_auth_context(token)
 
     def test_is_valid_with_context(self):
         """Test is_valid when context is set."""
@@ -291,32 +333,23 @@ class TestDynamicAuth:
         auth = DynamicAuth(config)
 
         ctx = AuthContext(token="test-token", validated=False)
-        set_current_auth_context(ctx)
+        token = set_current_auth_context(ctx)
 
         try:
             assert auth.is_valid() is True
         finally:
-            set_current_auth_context(None)
+            reset_auth_context(token)
 
     def test_is_valid_no_context(self):
         """Test is_valid when no context."""
         config = self.create_config()
         auth = DynamicAuth(config)
 
-        set_current_auth_context(None)
-        assert auth.is_valid() is False
-
-    def test_dev_mode_status(self):
-        """Test dev mode status reporting."""
-        config = self.create_config(dev_mode_enabled=True)
-
-        with patch.dict("os.environ", {"TEST_TOKEN": "dev-token"}):
-            auth = DynamicAuth(config)
-            status = auth.get_dev_mode_status()
-
-            assert status["enabled"] is True
-            assert status["token_env"] == "TEST_TOKEN"
-            assert status["token_set"] is True
+        token = set_current_auth_context(None)
+        try:
+            assert auth.is_valid() is False
+        finally:
+            reset_auth_context(token)
 
 
 class TestDynamicTokenAuth:
@@ -328,7 +361,7 @@ class TestDynamicTokenAuth:
 
         # Set context
         ctx = AuthContext(token="test-token", validated=False)
-        set_current_auth_context(ctx)
+        context_token = set_current_auth_context(ctx)
 
         try:
             # Create mock request
@@ -342,22 +375,24 @@ class TestDynamicTokenAuth:
 
             assert modified_request.headers["Authorization"] == "Bearer test-token"
         finally:
-            set_current_auth_context(None)
+            reset_auth_context(context_token)
 
     def test_no_token_without_context(self):
         """Test no token added when no context."""
         auth = DynamicTokenAuth()
 
-        set_current_auth_context(None)
+        context_token = set_current_auth_context(None)
+        try:
+            import httpx
 
-        import httpx
+            request = httpx.Request("GET", "https://api.example.com/test")
 
-        request = httpx.Request("GET", "https://api.example.com/test")
+            flow = auth.auth_flow(request)
+            modified_request = next(flow)
 
-        flow = auth.auth_flow(request)
-        modified_request = next(flow)
-
-        assert "Authorization" not in modified_request.headers
+            assert "Authorization" not in modified_request.headers
+        finally:
+            reset_auth_context(context_token)
 
 
 class TestStaticTokenAuth:

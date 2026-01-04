@@ -139,11 +139,8 @@ async def on_message(message: cl.Message):
         ).send()
         return
 
-    # Create response message for streaming
-    response_msg = cl.Message(content="")
-    await response_msg.send()
-
     collected_text = ""
+    tool_steps: dict[str, cl.Step] = {}  # Track steps by function name
 
     try:
         # Run the agent
@@ -157,28 +154,36 @@ async def on_message(message: cl.Message):
         ):
             if hasattr(event, "content") and event.content and event.content.parts:
                 for part in event.content.parts:
-                    # Handle text response
+                    # Collect text (don't display yet - show after tool calls)
                     if hasattr(part, "text") and part.text:
                         collected_text += part.text
-                        response_msg.content = collected_text
-                        await response_msg.update()
 
-                    # Handle function call
+                    # Handle function call - create step and track it
                     if hasattr(part, "function_call") and part.function_call:
                         fc = part.function_call
-                        async with cl.Step(name=fc.name, type="tool") as step:
-                            step.input = dict(fc.args) if fc.args else {}
+                        step = cl.Step(name=fc.name, type="tool")
+                        step.input = dict(fc.args) if fc.args else {}
+                        await step.send()
+                        tool_steps[fc.name] = step
 
-        # Final update
+                    # Handle function response - update the step with output
+                    if hasattr(part, "function_response") and part.function_response:
+                        fr = part.function_response
+                        if fr.name in tool_steps:
+                            step = tool_steps[fr.name]
+                            if fr.response:
+                                # Set output as dict for nice rendering (like input)
+                                step.output = fr.response
+                            await step.update()
+
+        # Send final response after all tool calls complete
         if collected_text:
-            response_msg.content = collected_text
-            await response_msg.update()
+            await cl.Message(content=collected_text).send()
 
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()
-        response_msg.content = f"Error: {e}\n\n```\n{error_details}\n```"
-        await response_msg.update()
+        await cl.Message(content=f"Error: {e}\n\n```\n{error_details}\n```").send()
 
 
 if __name__ == "__main__":

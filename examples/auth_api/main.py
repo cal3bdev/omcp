@@ -25,8 +25,20 @@ from pydantic import BaseModel, Field
 # Configuration
 # =============================================================================
 
-# Secret key for JWT signing (in production, use a secure secret)
-JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-key-change-in-production")
+# Secret key for JWT signing - generate secure random if not provided
+_env_secret = os.environ.get("JWT_SECRET")
+if _env_secret:
+    JWT_SECRET = _env_secret
+else:
+    # Generate a secure random secret for this session
+    # Tokens will not persist across restarts - this is intentional for demos
+    JWT_SECRET = secrets.token_urlsafe(32)
+    import sys
+    print(
+        "WARNING: JWT_SECRET not set. Using random secret (tokens won't persist across restarts).",
+        file=sys.stderr,
+    )
+
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_HOURS = 24
 

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import os
-from contextvars import ContextVar
-from typing import TYPE_CHECKING, Any
+from contextlib import contextmanager
+from contextvars import ContextVar, Token
+from typing import TYPE_CHECKING, Generator
 
 from omcp.auth.base import AuthProvider
 from omcp.auth.context import AuthContext, TokenClaims
@@ -30,9 +30,49 @@ def get_current_auth_context() -> AuthContext | None:
     return _request_auth_context.get()
 
 
-def set_current_auth_context(ctx: AuthContext | None) -> None:
-    """Set the auth context for the current request."""
-    _request_auth_context.set(ctx)
+def set_current_auth_context(ctx: AuthContext | None) -> Token[AuthContext | None]:
+    """Set the auth context for the current request.
+
+    Returns:
+        A token that can be used with reset_auth_context() to restore
+        the previous value. This ensures proper cleanup in nested contexts.
+    """
+    return _request_auth_context.set(ctx)
+
+
+def reset_auth_context(token: Token[AuthContext | None]) -> None:
+    """Reset the auth context to its previous value.
+
+    This should be used in a finally block to ensure the context is
+    properly restored even if an exception occurs.
+
+    Args:
+        token: The token returned by set_current_auth_context()
+    """
+    _request_auth_context.reset(token)
+
+
+@contextmanager
+def auth_context_scope(ctx: AuthContext | None) -> Generator[None, None, None]:
+    """Context manager for safely scoping auth context.
+
+    Ensures the auth context is properly reset to its previous value
+    when the scope exits, even if an exception occurs.
+
+    Usage:
+        with auth_context_scope(auth_context):
+            # auth_context is available via get_current_auth_context()
+            await process_request()
+        # Previous context (or None) is automatically restored
+
+    Args:
+        ctx: The auth context to set for this scope
+    """
+    token = _request_auth_context.set(ctx)
+    try:
+        yield
+    finally:
+        _request_auth_context.reset(token)
 
 
 class DynamicAuth(AuthProvider):
@@ -63,11 +103,6 @@ class DynamicAuth(AuthProvider):
         """
         self.config = config
         self.jwt_validator = jwt_validator
-        self._dev_mode_token: str | None = None
-
-        # Load dev mode token if enabled
-        if config.dev_mode.enabled and config.dev_mode.token_env:
-            self._dev_mode_token = os.environ.get(config.dev_mode.token_env)
 
     def extract_token(self, authorization_header: str | None) -> str:
         """Extract bearer token from Authorization header.
@@ -79,14 +114,11 @@ class DynamicAuth(AuthProvider):
             The extracted token string
 
         Raises:
-            MissingAuthError: If header is missing (and no dev token)
+            MissingAuthError: If header is missing
             InvalidAuthSchemeError: If not using expected scheme
             MissingTokenError: If token is empty
         """
-        # If no header provided, check dev mode fallback
         if not authorization_header:
-            if self._dev_mode_token:
-                return self._dev_mode_token
             raise MissingAuthError()
 
         # Get expected scheme from config
@@ -178,21 +210,6 @@ class DynamicAuth(AuthProvider):
         """
         ctx = get_current_auth_context()
         return ctx is not None and ctx.token is not None
-
-    def is_dev_mode_enabled(self) -> bool:
-        """Check if dev mode is enabled and token is available."""
-        return self.config.dev_mode.enabled and self._dev_mode_token is not None
-
-    def get_dev_mode_status(self) -> dict[str, Any]:
-        """Get dev mode status for diagnostics."""
-        if not self.config.dev_mode.enabled:
-            return {"enabled": False}
-
-        return {
-            "enabled": True,
-            "token_env": self.config.dev_mode.token_env,
-            "token_set": self._dev_mode_token is not None,
-        }
 
 
 def create_dynamic_auth(config: AuthConfig) -> DynamicAuth:

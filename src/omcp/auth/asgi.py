@@ -9,7 +9,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from omcp.auth.context import AuthContext
-from omcp.auth.dynamic import set_current_auth_context
+from omcp.auth.dynamic import reset_auth_context, set_current_auth_context
 from omcp.auth.errors import AuthError
 
 if TYPE_CHECKING:
@@ -71,25 +71,25 @@ class DynamicAuthMiddleware(BaseHTTPMiddleware):
             # Authenticate the request
             auth_context = await self.dynamic_auth.authenticate(auth_header)
 
-            # Set the context for this request
-            set_current_auth_context(auth_context)
+            # Set the context for this request, keeping token for proper reset
+            context_token = set_current_auth_context(auth_context)
 
             try:
                 # Process the request
                 response = await call_next(request)
                 return response
             finally:
-                # Clear the context after request
-                set_current_auth_context(None)
+                # Reset to previous context value (proper cleanup)
+                reset_auth_context(context_token)
 
         except AuthError as e:
             if not self.require_auth and auth_header is None:
                 # No auth provided but not required - proceed without context
-                set_current_auth_context(None)
+                context_token = set_current_auth_context(None)
                 try:
                     return await call_next(request)
                 finally:
-                    set_current_auth_context(None)
+                    reset_auth_context(context_token)
 
             # Auth required but failed - return error
             return self._create_auth_error_response(e)

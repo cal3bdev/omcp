@@ -7,8 +7,10 @@ from omcp.auth.bearer import BearerAuth
 from omcp.auth.context import AuthContext, TokenClaims
 from omcp.auth.dynamic import (
     DynamicAuth,
+    auth_context_scope,
     create_dynamic_auth,
     get_current_auth_context,
+    reset_auth_context,
     set_current_auth_context,
 )
 from omcp.auth.errors import (
@@ -55,6 +57,8 @@ __all__ = [
     # Context management
     "get_current_auth_context",
     "set_current_auth_context",
+    "reset_auth_context",
+    "auth_context_scope",
     # Factory functions
     "create_auth_provider",
     "create_dynamic_auth",

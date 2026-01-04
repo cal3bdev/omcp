@@ -69,13 +69,6 @@ class AuthHeaderConfig(BaseModel):
     scheme: str | None = "Bearer"
 
 
-class DevModeConfig(BaseModel):
-    """Development mode configuration for static token fallback."""
-
-    enabled: bool = False
-    token_env: str | None = None  # Environment variable containing dev token
-
-
 class DynamicAuthConfig(BaseModel):
     """Dynamic authentication configuration (stateless passthrough).
 
@@ -85,7 +78,6 @@ class DynamicAuthConfig(BaseModel):
     validation: JWTValidationConfig = Field(default_factory=JWTValidationConfig)
     introspection: TokenIntrospectionConfig = Field(default_factory=TokenIntrospectionConfig)
     header: AuthHeaderConfig = Field(default_factory=AuthHeaderConfig)
-    dev_mode: DevModeConfig = Field(default_factory=DevModeConfig)
 
 
 class AuthConfig(BaseModel):
@@ -106,7 +98,6 @@ class AuthConfig(BaseModel):
     validation: JWTValidationConfig = Field(default_factory=JWTValidationConfig)
     introspection: TokenIntrospectionConfig = Field(default_factory=TokenIntrospectionConfig)
     header: AuthHeaderConfig = Field(default_factory=AuthHeaderConfig)
-    dev_mode: DevModeConfig = Field(default_factory=DevModeConfig)
 
 
 # -----------------------------------------------------------------------------

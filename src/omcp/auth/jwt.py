@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, TYPE_CHECKING
+from urllib.parse import urlparse
 
 import jwt
 from jwt import PyJWKClient
@@ -17,6 +19,8 @@ from omcp.auth.errors import (
 if TYPE_CHECKING:
     from omcp.config.models import JWTValidationConfig
 
+logger = logging.getLogger(__name__)
+
 
 class JWTValidator:
     """Validates JWT tokens using JWKS.
@@ -30,9 +34,22 @@ class JWTValidator:
 
         Args:
             config: JWT validation configuration
+
+        Raises:
+            ValueError: If JWKS URL is not HTTPS (security requirement)
         """
         self.config = config
         self._jwks_client: PyJWKClient | None = None
+
+        # Validate JWKS URL uses HTTPS to prevent MITM attacks
+        if config.jwks_url:
+            parsed = urlparse(config.jwks_url)
+            if parsed.scheme != "https":
+                # Allow localhost for development
+                if parsed.hostname not in ("localhost", "127.0.0.1"):
+                    raise ValueError(
+                        f"JWKS URL must use HTTPS for security. Got: {config.jwks_url}"
+                    )
 
     @property
     def jwks_client(self) -> PyJWKClient:
@@ -92,10 +109,14 @@ class JWTValidator:
         except jwt.InvalidIssuerError:
             raise InvalidIssuerError(self.config.issuer or "unknown")
         except jwt.DecodeError as e:
+            logger.debug("JWT decode error: %s", e)
             raise InvalidTokenError(f"Decode error: {e}")
         except jwt.InvalidTokenError as e:
+            logger.debug("JWT validation error: %s", e)
             raise InvalidTokenError(str(e))
         except Exception as e:
+            # Log unexpected errors at warning level for debugging
+            logger.warning("Unexpected JWT validation error: %s", e, exc_info=True)
             raise InvalidTokenError(f"Validation failed: {e}")
 
     def clear_cache(self) -> None:
