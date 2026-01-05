@@ -12,8 +12,10 @@ auth:
 mode: single
 
 server:
-  transport: stdio
+  transport: http
   name: "widget-store-mcp"
+  host: "127.0.0.1"
+  port: 9000
 
 # Filter out internal, debug, admin, and legacy endpoints
 endpoints:

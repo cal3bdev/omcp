@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any
 
+import uvicorn
 from fastmcp import FastMCP
 
 from omcp.auth import AuthProvider, create_auth_provider
@@ -181,6 +182,7 @@ class ModuleRunner:
         host: str,
         port: int,
         transport: str,
+        middleware: list[Any] | None = None,
     ) -> None:
         """Run a single module server synchronously.
 
@@ -189,8 +191,14 @@ class ModuleRunner:
             host: Host to bind to
             port: Port to bind to
             transport: Transport type (sse or streamable-http)
+            middleware: Optional ASGI middleware list (for dynamic auth)
         """
-        mcp.run(transport=transport, host=host, port=port, show_banner=False)
+        if middleware:
+            # Use http_app with middleware for dynamic auth
+            app = mcp.http_app(transport=transport, middleware=middleware)
+            uvicorn.run(app, host=host, port=port, log_level="warning")
+        else:
+            mcp.run(transport=transport, host=host, port=port, show_banner=False)
 
     async def run_async(self) -> None:
         """Run all module servers asynchronously."""
@@ -234,6 +242,9 @@ class ModuleRunner:
                 builder = self._build_module(module)
                 mcp = builder.build()
 
+                # Get middleware from builder (for dynamic auth)
+                middleware = builder.get_asgi_middleware()
+
                 # Register the instance
                 instance = ModuleInstance(
                     name=module.name,
@@ -247,7 +258,7 @@ class ModuleRunner:
 
                 print_success(f"  {module.name}: {url} ({len(module.operations)} tools)")
 
-                # Create task to run this module
+                # Create task to run this module (with middleware if present)
                 task = loop.run_in_executor(
                     self._executor,
                     self._run_module_sync,
@@ -255,6 +266,7 @@ class ModuleRunner:
                     host,
                     port,
                     transport,
+                    middleware if middleware else None,
                 )
                 tasks.append(task)
 

@@ -38,6 +38,12 @@ def create_auth_provider(
         return _create_bearer_auth(config)
     elif config.type == AuthType.OAUTH2:
         return _create_oauth2_auth(config, provider_name, storage)
+    elif config.type == AuthType.JWT:
+        # JWT auth is handled by FastMCP's built-in capabilities:
+        # - Header forwarding via get_http_headers()
+        # - Token validation via JWTVerifier (set on mcp.auth)
+        # No custom auth provider needed.
+        return NoneAuth()
     else:
         raise ConfigError(f"Unknown auth type: {config.type}")
 

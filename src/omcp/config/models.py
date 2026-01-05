@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class Mode(str, Enum):
@@ -22,6 +22,7 @@ class AuthType(str, Enum):
     API_KEY = "api_key"
     BEARER = "bearer"
     OAUTH2 = "oauth2"
+    JWT = "jwt"  # Dynamic JWT auth with validation
 
 
 class LLMProvider(str, Enum):
@@ -38,11 +39,68 @@ class LLMProvider(str, Enum):
 # -----------------------------------------------------------------------------
 
 
+class JWTValidationConfig(BaseModel):
+    """JWT validation configuration for dynamic auth.
+
+    When enabled=True, tokens are validated using FastMCP's JWTVerifier.
+    When enabled=False (passthrough mode), tokens are forwarded without validation.
+
+    Note: FastMCP's JWTVerifier has some limitations compared to full JWT validation:
+    - Only the first algorithm in the list is used
+    - clock_skew_seconds is not configurable (uses library defaults)
+    - jwks_cache_ttl_seconds is not configurable (uses library defaults)
+    - required_claims beyond 'exp' are not enforced (exp is always checked)
+    """
+
+    enabled: bool = True
+    jwks_url: str | None = None
+    jwks_cache_ttl_seconds: int = 3600  # Note: Not currently used by FastMCP
+    issuer: str | None = None
+    audience: str | None = None
+    algorithms: list[str] = Field(default_factory=lambda: ["RS256"])  # Only first is used
+    clock_skew_seconds: int = 30  # Note: Not currently used by FastMCP
+    required_claims: list[str] = Field(default_factory=lambda: ["exp", "sub"])  # Note: Only exp is enforced
+
+
+class TokenIntrospectionConfig(BaseModel):
+    """Token introspection configuration for opaque tokens."""
+
+    enabled: bool = False
+    url: str | None = None
+    client_id: str | None = None
+    client_secret: str | None = None
+    cache_ttl_seconds: int = 60
+
+
+class AuthHeaderConfig(BaseModel):
+    """Auth header configuration.
+
+    Note: For JWT auth (auth.type: jwt), custom header names and schemes are
+    NOT supported. FastMCP's JWTVerifier only validates tokens from the standard
+    'Authorization: Bearer <token>' header. Use auth.type: bearer or api_key
+    if you need custom header names.
+    """
+
+    name: str = "Authorization"
+    scheme: str | None = "Bearer"
+
+
+class DynamicAuthConfig(BaseModel):
+    """Dynamic authentication configuration (stateless passthrough).
+
+    Clients are responsible for obtaining tokens. OMCP validates and forwards.
+    """
+
+    validation: JWTValidationConfig = Field(default_factory=JWTValidationConfig)
+    introspection: TokenIntrospectionConfig = Field(default_factory=TokenIntrospectionConfig)
+    header: AuthHeaderConfig = Field(default_factory=AuthHeaderConfig)
+
+
 class AuthConfig(BaseModel):
     """Authentication configuration."""
 
     type: AuthType
-    # API key / Bearer
+    # API key / Bearer (static tokens - legacy/simple mode)
     token: str | None = None
     key: str | None = None
     header_name: str = "Authorization"
@@ -52,6 +110,26 @@ class AuthConfig(BaseModel):
     auth_url: str | None = None
     token_url: str | None = None
     scopes: list[str] = Field(default_factory=list)
+    # Dynamic auth (JWT validation, passthrough)
+    validation: JWTValidationConfig = Field(default_factory=JWTValidationConfig)
+    introspection: TokenIntrospectionConfig = Field(default_factory=TokenIntrospectionConfig)
+    header: AuthHeaderConfig = Field(default_factory=AuthHeaderConfig)
+
+    @model_validator(mode="after")
+    def validate_jwt_header_config(self) -> "AuthConfig":
+        """Validate that JWT auth doesn't use custom headers (not supported by FastMCP)."""
+        if self.type == AuthType.JWT and self.validation.enabled:
+            # Check if non-default header config is specified
+            if self.header.name != "Authorization" or self.header.scheme != "Bearer":
+                raise ValueError(
+                    "Custom header names and schemes are not supported for JWT auth with "
+                    "validation enabled. FastMCP's JWTVerifier only supports the standard "
+                    "'Authorization: Bearer <token>' header. Options:\n"
+                    "  1. Use the default header config (Authorization: Bearer)\n"
+                    "  2. Set validation.enabled=false for passthrough mode\n"
+                    "  3. Use auth.type: bearer or api_key for custom headers"
+                )
+        return self
 
 
 # -----------------------------------------------------------------------------

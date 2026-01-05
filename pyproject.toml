@@ -41,7 +41,8 @@ demo = [
 openai = ["openai>=1.0.0"]
 anthropic = ["anthropic>=0.18.0"]
 gemini = ["google-generativeai>=0.8.0"]
-all = ["omcp[dev,demo,openai,anthropic,gemini]"]
+chainlit = ["chainlit>=2.0.0", "mcp>=1.0.0", "google-genai>=1.0.0", "google-adk>=1.0.0"]
+all = ["omcp[dev,demo,openai,anthropic,gemini,chainlit]"]
 
 [project.scripts]
 omcp = "omcp.cli:app"

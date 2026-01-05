@@ -5,13 +5,11 @@ from __future__ import annotations
 import asyncio
 import signal
 from enum import Enum
-from typing import Any
 
 from fastmcp import FastMCP
 
-from omcp.config.models import OMCPConfig, ServerSettings
-from omcp.server.builder import ServerBuilder, build_server
-from omcp.utils.console import print_error, print_info, print_success
+from omcp.config.models import OMCPConfig
+from omcp.server.builder import ServerBuilder
 from omcp.utils.errors import OMCPError
 
 
@@ -86,13 +84,14 @@ class ServerRunner:
         """Run server with SSE transport."""
         host = self.config.server.host
         port = self.config.server.port
+        # FastMCP handles auth via mcp.auth (set in ServerBuilder.build())
         self.mcp.run(transport="sse", host=host, port=port, show_banner=False)
 
     def _run_http(self) -> None:
         """Run server with HTTP transport."""
         host = self.config.server.host
         port = self.config.server.port
-        # FastMCP uses streamable-http transport
+        # FastMCP handles auth via mcp.auth (set in ServerBuilder.build())
         self.mcp.run(transport="streamable-http", host=host, port=port, show_banner=False)
 
     async def run_async(self) -> None:
@@ -131,20 +130,24 @@ class ServerRunner:
         """Run server with SSE transport asynchronously."""
         host = self.config.server.host
         port = self.config.server.port
+        mcp = self.mcp
+        # FastMCP handles auth via mcp.auth (set in ServerBuilder.build())
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(
             None,
-            lambda: self.mcp.run(transport="sse", host=host, port=port, show_banner=False),
+            lambda: mcp.run(transport="sse", host=host, port=port, show_banner=False),
         )
 
     async def _run_http_async(self) -> None:
         """Run server with HTTP transport asynchronously."""
         host = self.config.server.host
         port = self.config.server.port
+        mcp = self.mcp
+        # FastMCP handles auth via mcp.auth (set in ServerBuilder.build())
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(
             None,
-            lambda: self.mcp.run(transport="streamable-http", host=host, port=port, show_banner=False),
+            lambda: mcp.run(transport="streamable-http", host=host, port=port, show_banner=False),
         )
 
 

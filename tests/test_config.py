@@ -6,6 +6,7 @@ import pytest
 
 from omcp.config import OMCPConfig, load_config
 from omcp.config.env import substitute_env_vars
+from omcp.config.models import AuthConfig, AuthType, JWTValidationConfig, AuthHeaderConfig
 from omcp.utils.errors import ConfigError
 
 
@@ -69,3 +70,55 @@ class TestEnvSubstitution:
         assert result["items"][0] == "list_value"
         assert result["items"][1] == "static"
         del os.environ["LIST_VAR"]
+
+
+class TestJWTAuthValidation:
+    """Test JWT auth configuration validation."""
+
+    def test_jwt_auth_with_default_headers_allowed(self):
+        """JWT auth with default headers should be allowed."""
+        config = AuthConfig(
+            type=AuthType.JWT,
+            validation=JWTValidationConfig(enabled=True),
+            header=AuthHeaderConfig(name="Authorization", scheme="Bearer"),
+        )
+        assert config.type == AuthType.JWT
+
+    def test_jwt_auth_custom_header_name_rejected(self):
+        """JWT auth with custom header name should be rejected."""
+        with pytest.raises(ValueError) as exc:
+            AuthConfig(
+                type=AuthType.JWT,
+                validation=JWTValidationConfig(enabled=True),
+                header=AuthHeaderConfig(name="X-API-Key", scheme="Bearer"),
+            )
+        assert "Custom header names and schemes are not supported" in str(exc.value)
+
+    def test_jwt_auth_custom_scheme_rejected(self):
+        """JWT auth with custom scheme should be rejected."""
+        with pytest.raises(ValueError) as exc:
+            AuthConfig(
+                type=AuthType.JWT,
+                validation=JWTValidationConfig(enabled=True),
+                header=AuthHeaderConfig(name="Authorization", scheme="Token"),
+            )
+        assert "Custom header names and schemes are not supported" in str(exc.value)
+
+    def test_jwt_passthrough_mode_allows_custom_headers(self):
+        """JWT auth in passthrough mode should allow custom headers."""
+        config = AuthConfig(
+            type=AuthType.JWT,
+            validation=JWTValidationConfig(enabled=False),
+            header=AuthHeaderConfig(name="X-API-Key", scheme="Token"),
+        )
+        assert config.header.name == "X-API-Key"
+        assert config.header.scheme == "Token"
+
+    def test_bearer_auth_allows_custom_headers(self):
+        """Bearer auth should allow custom headers."""
+        config = AuthConfig(
+            type=AuthType.BEARER,
+            token="test-token",
+            header=AuthHeaderConfig(name="X-Custom", scheme="Token"),
+        )
+        assert config.header.name == "X-Custom"

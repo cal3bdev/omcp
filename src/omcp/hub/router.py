@@ -7,6 +7,7 @@ from enum import Enum
 from typing import Any
 
 import httpx
+from fastmcp.server.dependencies import get_http_headers
 
 from omcp.hub.registry import HubRegistry, RegisteredModule
 from omcp.utils.errors import OMCPError
@@ -185,11 +186,25 @@ class HubRouter:
             },
         }
 
+        # Build headers, including auth from current context
+        # FastMCP's get_http_headers() returns headers from the current request context
+        headers: dict[str, str] = {"Content-Type": "application/json"}
+        http_headers = get_http_headers()
+        if http_headers:
+            # Forward all headers from the incoming request (includes Authorization)
+            headers.update(http_headers)
+
         # Send request to module
+        # For streamable-http transport, modules serve at /mcp endpoint
+        # SSE modules already include /sse in their URL
+        module_endpoint = module.url
+        if not module_endpoint.endswith(("/sse", "/mcp")):
+            module_endpoint = f"{module_endpoint}/mcp"
+
         response = await self.client.post(
-            module.url,
+            module_endpoint,
             json=request_body,
-            headers={"Content-Type": "application/json"},
+            headers=headers,
         )
 
         if response.status_code != 200:

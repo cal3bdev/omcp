@@ -11,6 +11,7 @@ import json
 from typing import Any
 
 from fastmcp import FastMCP
+from fastmcp.server.dependencies import get_http_headers
 
 from omcp.config.models import HubSettings
 from omcp.hub.registry import HubRegistry, ToolSchema
@@ -207,10 +208,17 @@ class HubBuilder:
 
             args = arguments or {}
 
+            # Get headers from current request context to forward to module
+            # FastMCP's get_http_headers() captures Authorization and other headers
+            headers: dict[str, str] = {}
+            http_headers = get_http_headers()
+            if http_headers:
+                headers = dict(http_headers)
+
             try:
                 # Connect to the module's MCP server
                 module_endpoint = f"{module.url}/mcp"
-                async with streamablehttp_client(module_endpoint) as (read, write, _):
+                async with streamablehttp_client(module_endpoint, headers=headers) as (read, write, _):
                     async with ClientSession(read, write) as session:
                         await session.initialize()
 

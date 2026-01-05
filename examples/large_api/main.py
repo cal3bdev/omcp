@@ -9,12 +9,20 @@ from typing import Optional
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.routing import APIRoute
 from pydantic import BaseModel, Field
+
+
+def generate_operation_id(route: APIRoute) -> str:
+    """Generate clean operation IDs using just the function name."""
+    return route.endpoint.__name__
+
 
 app = FastAPI(
     title="MegaStore E-Commerce API",
     description="Large enterprise e-commerce platform API",
     version="3.0.0",
+    generate_unique_id_function=generate_operation_id,
 )
 
 # ============================================================================
