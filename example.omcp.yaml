@@ -1,0 +1,319 @@
+# =============================================================================
+# OMCP Configuration Reference
+# =============================================================================
+#
+# This file documents all available configuration options for OMCP.
+# Copy this file to `omcp.yaml` and customize for your API.
+#
+# Environment variables can be referenced with ${VAR_NAME} syntax.
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# REQUIRED: Core Settings
+# -----------------------------------------------------------------------------
+
+# Display name for your API (shown in UI and logs)
+name: "My API"
+
+# Path to your OpenAPI spec (file path or URL)
+# Supports JSON and YAML formats
+spec: "./openapi.json"
+# spec: "https://api.example.com/openapi.json"
+
+# Base URL for API requests
+# All tool calls will be made to this host
+base_url: "https://api.example.com"
+
+
+# -----------------------------------------------------------------------------
+# REQUIRED: Authentication
+# -----------------------------------------------------------------------------
+
+auth:
+  # Auth type: none | api_key | bearer | oauth2 | jwt
+  type: bearer
+
+  # --- Bearer Token (type: bearer) ---
+  # Static token sent with every request
+  token: "${API_TOKEN}"
+
+  # --- API Key (type: api_key) ---
+  # key: "${API_KEY}"
+  # header_name: "X-API-Key"  # Header to send the key in
+
+  # --- OAuth2 (type: oauth2) ---
+  # client_id: "${CLIENT_ID}"
+  # client_secret: "${CLIENT_SECRET}"
+  # auth_url: "https://auth.example.com/authorize"
+  # token_url: "https://auth.example.com/token"
+  # scopes: ["read", "write"]
+
+  # --- Dynamic JWT (type: jwt) ---
+  # For multi-tenant scenarios where each client provides their own token.
+  # OMCP extracts the token from requests and forwards it to your API.
+  #
+  # validation:
+  #   # Passthrough mode: forward tokens without validation (your API validates)
+  #   enabled: false
+  #
+  #   # OR Validation mode: OMCP validates tokens via JWKS before forwarding
+  #   # enabled: true
+  #   # jwks_url: "https://auth.example.com/.well-known/jwks.json"
+  #   # issuer: "https://auth.example.com"
+  #   # audience: "my-api"
+  #   # algorithms: ["RS256"]  # Only the first algorithm is used
+
+
+# -----------------------------------------------------------------------------
+# Server Mode
+# -----------------------------------------------------------------------------
+
+# Mode: single | modular
+#
+# single   - One MCP server with all tools (good for <30 operations)
+# modular  - Multiple micro-MCPs split by domain (good for 30+ operations)
+#            Enable hub for unified access via meta-tools
+mode: single
+
+
+# -----------------------------------------------------------------------------
+# Endpoint Filtering
+# -----------------------------------------------------------------------------
+
+# Control which endpoints become MCP tools.
+# Filters are applied BEFORE LLM processing.
+endpoints:
+  # Exclude patterns (blacklist approach)
+  # Tools matching these patterns will NOT be exposed
+  exclude:
+    - "DELETE *"           # Block all DELETE methods (safety default)
+    - "* /internal/**"     # Block all internal routes
+    - "* /admin/**"        # Block admin routes
+    - "GET /health"        # Block specific endpoint
+    - "* /debug/**"        # Block debug endpoints
+
+  # Include patterns (whitelist approach)
+  # If specified, ONLY these patterns are included (after excludes)
+  # include:
+  #   - "GET /users/*"
+  #   - "POST /orders"
+  #   - "* /public/**"
+
+# Pattern syntax:
+#   METHOD /path     - Specific method and path
+#   * /path          - All methods for a path
+#   METHOD *         - All paths for a method
+#   /path/**         - Path and all sub-paths (recursive)
+#   /path/*          - Direct children only
+
+
+# -----------------------------------------------------------------------------
+# Tool Customization (Per-Tool Overrides)
+# -----------------------------------------------------------------------------
+
+# Override auto-generated tool names and descriptions.
+# Keys are operation IDs from your OpenAPI spec.
+tools:
+  listUsers:
+    name: "get_all_users"
+    description: "Retrieve all users in the system with optional filtering"
+
+  # createUser:
+  #   name: "register_user"
+  #   description: "Create a new user account"
+
+
+# -----------------------------------------------------------------------------
+# LLM Planner
+# -----------------------------------------------------------------------------
+
+# Use an LLM to optimize tool names, descriptions, and module organization.
+# Run `omcp plan` to generate a plan, then `omcp serve` to use it.
+llm:
+  enabled: false
+
+  # Provider: openai | anthropic | gemini
+  provider: gemini
+  model: "gemini-2.0-flash"
+  api_key: "${GEMINI_API_KEY}"
+
+  # Generation settings
+  temperature: 0.1
+  max_tokens: 5000
+
+  # Planning strategy
+  strategy:
+    # Planning objectives (in priority order)
+    objectives:
+      - "minimize_tool_surface"      # Reduce redundant tools
+      - "agent_friendly_naming"      # Clear, predictable names
+      - "high_signal_descriptions"   # Useful, actionable descriptions
+      - "safe_by_default"            # Block dangerous operations
+      - "cohesive_modules"           # Group related tools together
+
+    # Tool limits
+    max_tools_total: 200             # Maximum tools across all modules
+    target_tools_per_module: 40      # Ideal module size
+    max_tools_per_module: 80         # Hard limit per module
+
+    # Naming conventions
+    naming:
+      style: "verb_noun"             # verb_noun | noun_verb | camelCase
+      avoid: ["get", "fetch"]        # Words to avoid in names
+      include_resource_in_name: true # e.g., "list_users" vs "list"
+      max_name_length: 40
+
+    # Safety policy
+    policy:
+      block_methods: ["DELETE"]      # HTTP methods to block
+      block_path_globs: []           # Path patterns to block
+      require_auth_for_non_get: true # Require auth for mutations
+      pii_redaction: true            # Redact PII in descriptions
+
+  # Output settings
+  output:
+    plan_path: "./omcp.plan.json"
+    save_normalized_spec: true
+    normalized_spec_path: "./.omcp/spec.normalized.json"
+
+
+# -----------------------------------------------------------------------------
+# Modules (Micro-MCPs)
+# -----------------------------------------------------------------------------
+
+# Split large APIs into domain-specific micro-MCP servers.
+# Each module runs as a separate server with its own tool set.
+modules:
+  enabled: false
+
+  # Split strategy: llm | tags | path
+  #   llm  - Use LLM-generated plan for intelligent grouping
+  #   tags - Group by OpenAPI tags
+  #   path - Group by URL path prefixes
+  split_strategy: llm
+
+  # Module filtering (applied after split)
+  allow: ["*"]           # Allow all modules
+  deny: []               # Deny specific modules
+  # deny: ["internal", "admin"]
+
+  # Runtime settings
+  runtime:
+    base_port: 9100      # First module gets this port, subsequent +1
+    host: "127.0.0.1"
+    transport: "http"    # http | sse | stdio
+
+
+# -----------------------------------------------------------------------------
+# Hub (Meta-Tool Gateway)
+# -----------------------------------------------------------------------------
+
+# The hub aggregates all modules behind 6 meta-tools:
+#   list_modules, list_module_tools, find_tool,
+#   get_tool_schema, call_tool, hub_status
+#
+# This prevents context window bloat with large APIs.
+hub:
+  enabled: false
+  name: "OMCP Hub"
+
+  # Server settings
+  transport: "http"      # http | sse | stdio
+  host: "127.0.0.1"
+  port: 9000
+
+  # Routing configuration
+  routing:
+    mode: "tool_to_module"   # tool_to_module | operation_to_module
+    enforce_policy: true     # Enforce safety policies from LLM plan
+
+  # Discovery tools configuration
+  discovery:
+    expose_registry_tool: true       # Enable list_modules, find_tool, etc.
+    expose_module_docs_resource: true # Expose module documentation
+
+
+# -----------------------------------------------------------------------------
+# Server Settings (Single Mode)
+# -----------------------------------------------------------------------------
+
+# Configuration for single-mode server.
+server:
+  timeout: 60            # Request timeout in seconds
+  transport: "stdio"     # stdio | sse | http
+  host: "127.0.0.1"
+  port: 8000
+
+
+# -----------------------------------------------------------------------------
+# Advanced Settings
+# -----------------------------------------------------------------------------
+
+advanced:
+  # Custom headers added to all API requests
+  headers:
+    X-Custom-Header: "custom-value"
+    # User-Agent: "OMCP/1.0"
+
+  # HTTP retry configuration
+  retry:
+    max_attempts: 3
+    backoff_factor: 0.5
+
+  # Response handling
+  response:
+    max_size_mb: 10        # Maximum response size
+    truncate_arrays: 100   # Truncate arrays longer than this
+
+
+# =============================================================================
+# Quick Start Configurations
+# =============================================================================
+#
+# MINIMAL (Small API, single mode):
+# ---------------------------------
+# name: "My API"
+# spec: "./openapi.json"
+# base_url: "https://api.example.com"
+# auth:
+#   type: bearer
+#   token: "${API_TOKEN}"
+#
+#
+# MODULAR (Large API with hub):
+# -----------------------------
+# name: "Large API"
+# spec: "./openapi.json"
+# base_url: "https://api.example.com"
+# mode: modular
+# auth:
+#   type: bearer
+#   token: "${API_TOKEN}"
+# llm:
+#   enabled: true
+#   provider: gemini
+#   model: gemini-2.0-flash
+#   api_key: "${GEMINI_API_KEY}"
+# modules:
+#   enabled: true
+#   split_strategy: llm
+# hub:
+#   enabled: true
+#   port: 9000
+#
+#
+# MULTI-TENANT (Dynamic JWT auth):
+# --------------------------------
+# name: "Multi-Tenant API"
+# spec: "./openapi.json"
+# base_url: "https://api.example.com"
+# auth:
+#   type: jwt
+#   validation:
+#     enabled: true
+#     jwks_url: "https://auth.example.com/.well-known/jwks.json"
+#     issuer: "https://auth.example.com"
+#     audience: "my-api"
+#
+# =============================================================================

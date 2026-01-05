@@ -392,6 +392,8 @@ The plan is saved to `omcp.plan.json` and validated against your spec:
 
 ## Configuration Reference
 
+See [`example.omcp.yaml`](example.omcp.yaml) for a complete reference with all options documented.
+
 ### Minimal
 
 ```yaml
