@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class Mode(str, Enum):
@@ -114,6 +114,22 @@ class AuthConfig(BaseModel):
     validation: JWTValidationConfig = Field(default_factory=JWTValidationConfig)
     introspection: TokenIntrospectionConfig = Field(default_factory=TokenIntrospectionConfig)
     header: AuthHeaderConfig = Field(default_factory=AuthHeaderConfig)
+
+    @model_validator(mode="after")
+    def validate_jwt_header_config(self) -> "AuthConfig":
+        """Validate that JWT auth doesn't use custom headers (not supported by FastMCP)."""
+        if self.type == AuthType.JWT and self.validation.enabled:
+            # Check if non-default header config is specified
+            if self.header.name != "Authorization" or self.header.scheme != "Bearer":
+                raise ValueError(
+                    "Custom header names and schemes are not supported for JWT auth with "
+                    "validation enabled. FastMCP's JWTVerifier only supports the standard "
+                    "'Authorization: Bearer <token>' header. Options:\n"
+                    "  1. Use the default header config (Authorization: Bearer)\n"
+                    "  2. Set validation.enabled=false for passthrough mode\n"
+                    "  3. Use auth.type: bearer or api_key for custom headers"
+                )
+        return self
 
 
 # -----------------------------------------------------------------------------

@@ -75,13 +75,14 @@ class HubRunner:
         kwargs: dict[str, Any] = {}
 
         if validation.jwks_url:
-            # Enforce HTTPS for JWKS endpoints in production
-            if not validation.jwks_url.startswith("https://"):
-                import warnings
-                warnings.warn(
-                    f"JWKS URL should use HTTPS for security: {validation.jwks_url}",
-                    UserWarning,
-                    stacklevel=2,
+            # Enforce HTTPS for JWKS endpoints (allow localhost for development)
+            from urllib.parse import urlparse
+            parsed = urlparse(validation.jwks_url)
+            is_localhost = parsed.hostname in ("localhost", "127.0.0.1")
+            if parsed.scheme != "https" and not is_localhost:
+                raise ValueError(
+                    f"JWKS URL must use HTTPS for security: {validation.jwks_url}. "
+                    "Only localhost URLs are allowed to use HTTP for development."
                 )
             kwargs["jwks_uri"] = validation.jwks_url
         elif validation.issuer:

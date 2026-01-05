@@ -1,11 +1,12 @@
 """Tests for single server build and run."""
 
 from pathlib import Path
+from unittest.mock import patch, MagicMock
 
 import pytest
 
 from omcp.config import load_config
-from omcp.config.models import ToolOverride
+from omcp.config.models import AuthType, JWTValidationConfig, ToolOverride
 from omcp.server import ServerBuilder
 
 
@@ -110,3 +111,79 @@ class TestServerBuilderBuild:
         mcp2 = builder.build()
 
         assert mcp1 is mcp2
+
+
+class TestJWKSHttpsEnforcement:
+    """Test HTTPS enforcement for JWKS URLs."""
+
+    def test_http_jwks_url_rejected(self):
+        """HTTP JWKS URLs should be rejected for non-localhost."""
+        config = load_config(FIXTURES / "test_config.yaml")
+        config.spec = str(FIXTURES / "petstore.json")
+        config.auth.type = AuthType.JWT
+        config.auth.validation = JWTValidationConfig(
+            enabled=True,
+            jwks_url="http://example.com/.well-known/jwks.json",
+        )
+
+        builder = ServerBuilder(config)
+
+        with pytest.raises(ValueError) as exc:
+            builder._create_fastmcp_auth()
+
+        assert "JWKS URL must use HTTPS" in str(exc.value)
+
+    def test_https_jwks_url_allowed(self):
+        """HTTPS JWKS URLs should be allowed."""
+        config = load_config(FIXTURES / "test_config.yaml")
+        config.spec = str(FIXTURES / "petstore.json")
+        config.auth.type = AuthType.JWT
+        config.auth.validation = JWTValidationConfig(
+            enabled=True,
+            jwks_url="https://example.com/.well-known/jwks.json",
+        )
+
+        builder = ServerBuilder(config)
+
+        # Mock the JWTVerifier import to avoid needing actual FastMCP
+        with patch("fastmcp.server.auth.providers.jwt.JWTVerifier") as mock_verifier:
+            mock_verifier.return_value = MagicMock()
+            result = builder._create_fastmcp_auth()
+            assert result is not None
+            mock_verifier.assert_called_once()
+
+    def test_localhost_http_allowed(self):
+        """HTTP should be allowed for localhost (development)."""
+        config = load_config(FIXTURES / "test_config.yaml")
+        config.spec = str(FIXTURES / "petstore.json")
+        config.auth.type = AuthType.JWT
+        config.auth.validation = JWTValidationConfig(
+            enabled=True,
+            jwks_url="http://localhost:8000/.well-known/jwks.json",
+        )
+
+        builder = ServerBuilder(config)
+
+        # Mock the JWTVerifier import
+        with patch("fastmcp.server.auth.providers.jwt.JWTVerifier") as mock_verifier:
+            mock_verifier.return_value = MagicMock()
+            result = builder._create_fastmcp_auth()
+            assert result is not None
+
+    def test_127_0_0_1_http_allowed(self):
+        """HTTP should be allowed for 127.0.0.1 (development)."""
+        config = load_config(FIXTURES / "test_config.yaml")
+        config.spec = str(FIXTURES / "petstore.json")
+        config.auth.type = AuthType.JWT
+        config.auth.validation = JWTValidationConfig(
+            enabled=True,
+            jwks_url="http://127.0.0.1:8000/.well-known/jwks.json",
+        )
+
+        builder = ServerBuilder(config)
+
+        # Mock the JWTVerifier import
+        with patch("fastmcp.server.auth.providers.jwt.JWTVerifier") as mock_verifier:
+            mock_verifier.return_value = MagicMock()
+            result = builder._create_fastmcp_auth()
+            assert result is not None
