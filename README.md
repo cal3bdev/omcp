@@ -1,47 +1,28 @@
 # OMCP
 
-**Turn any REST API into an AI-ready tool interface in minutes.**
+**Give AI agents access to your API in minutes, not weeks.**
 
-OMCP (OpenAPI to MCP) converts OpenAPI specifications into [Model Context Protocol](https://modelcontextprotocol.io/) servers, enabling AI agents like Claude, Gemini, and GPT to interact with your APIs through a standardized tool interface—no custom integration code required.
+OMCP converts your OpenAPI spec into a [Model Context Protocol](https://modelcontextprotocol.io/) server. Point it at your spec, run one command, and AI agents can call your API.
 
 ```
-Your OpenAPI Spec  →  OMCP  →  AI Agent calls your API
+Your OpenAPI Spec  →  OMCP  →  AI agents call your API
 ```
+
+No tool definitions to write. No integration code to maintain. Just your spec and one config file.
 
 ---
 
-## Why OMCP?
+## The Problem
 
-Building AI agents that interact with APIs is painful:
+You have an API. You want AI agents to use it. Your options today:
 
-| The Hard Way | With OMCP |
-|--------------|-----------|
-| Write custom tool definitions for each endpoint | Point at your OpenAPI spec |
-| Maintain tool code as API evolves | Spec changes auto-propagate |
-| Handle auth, retries, error mapping manually | Built-in auth providers |
-| Context window bloat with 100+ tools | Smart hub architecture |
-| Agent struggles with poor tool names | LLM-powered name/description optimization |
+| Approach | Pain |
+|----------|------|
+| Write tool definitions manually | Tedious, error-prone, falls out of sync with your API |
+| Use an agent framework | Still have to map every endpoint, handle auth, manage context limits |
+| Build from scratch | Weeks of integration work for each API |
 
-**OMCP bridges the gap between your existing REST APIs and AI agents.**
-
----
-
-## Key Features
-
-### Instant MCP Servers
-Drop in any OpenAPI 3.0 spec (JSON or YAML, file or URL) and get a working MCP server immediately.
-
-### Smart Scaling for Large APIs
-APIs with 100+ endpoints overwhelm AI context windows. OMCP's **modular hub architecture** splits large APIs into domain-specific micro-MCPs, exposing just 6 meta-tools to the agent while providing access to all underlying operations.
-
-### LLM-Powered Optimization
-Automatically improve cryptic auto-generated names like `get_widgets_widgets_get` into agent-friendly names like `list_widgets`. Let an LLM organize endpoints into logical modules and write clear descriptions.
-
-### Production-Ready Auth
-Bearer tokens, API keys, OAuth2 with PKCE—all built in. Environment variable substitution keeps secrets out of config files.
-
-### Flexible Filtering
-Include/exclude patterns let you expose exactly the endpoints you want. Block dangerous operations, hide internal routes, or whitelist specific functionality.
+**With OMCP:** Point at your OpenAPI spec. Run `omcp serve`. Done.
 
 ---
 
@@ -50,12 +31,12 @@ Include/exclude patterns let you expose exactly the endpoints you want. Block da
 ### Installation
 
 ```bash
-git clone https://github.com/anthropics/omcp.git
+git clone https://github.com/cal3bdev/omcp.git
 cd omcp
 uv sync
 ```
 
-### 1. Create a Config File
+### Minimal Setup
 
 ```yaml
 # omcp.yaml
@@ -68,195 +49,369 @@ auth:
   token: "${API_TOKEN}"
 ```
 
-### 2. Run the Server
-
 ```bash
 export API_TOKEN="your-token"
 uv run omcp serve
 ```
 
-### 3. Connect Your AI Agent
+**That's it.** Your AI agent can now call your API.
 
-**Claude Desktop** (`claude_desktop_config.json`):
+### Connect to Claude Desktop
+
+Add to `claude_desktop_config.json`:
+
 ```json
 {
   "mcpServers": {
     "my-api": {
       "command": "uv",
-      "args": ["run", "--directory", "/path/to/omcp", "omcp", "serve", "-c", "/path/to/omcp.yaml"]
+      "args": ["run", "--directory", "/path/to/omcp", "omcp", "serve"]
     }
   }
 }
 ```
 
-**Any MCP Client** (HTTP transport):
-```
-http://localhost:8000/mcp
-```
+---
 
-That's it. Your AI agent can now call your API.
+## Who Is This For
+
+OMCP is for developers who already have an API and want AI agents to use it:
+
+| You Are | Your Goal | Why OMCP |
+|---------|-----------|----------|
+| **SaaS developer** | Add AI chat to your product | Uses your existing API, zero new backend code |
+| **Platform engineer** | Build internal AI tooling | Hub architecture handles 100+ endpoints |
+| **Startup founder** | Ship AI features fast | Minutes to integrate, not weeks |
+| **Enterprise team** | AI layer on existing systems | Works with your existing auth |
+
+**If you have an API and an OpenAPI spec, OMCP gets you to "AI-ready" in minutes.**
 
 ---
 
-## Try the Demo
+## Why OMCP
 
-Run the full hub demo with a 100+ operation e-commerce API:
+| Without OMCP | With OMCP |
+|--------------|-----------|
+| Write tool definitions for every endpoint | Point at your OpenAPI spec |
+| Maintain tool code as your API evolves | Changes auto-propagate from spec |
+| Handle auth, errors, retries manually | Built-in auth providers |
+| 100+ tools overwhelm agent context | Hub architecture scales to any size |
+| Agents struggle with cryptic auto-generated names | LLM optimizes names and descriptions |
+| Build separate integration for each agent platform | MCP works with Claude, GPT, Gemini, and more |
 
-### Terminal 1: Start the Backend API
-```bash
-cd examples/large_api
-uv run uvicorn main:app --host 127.0.0.1 --port 8002
+---
+
+## Key Features
+
+### 🚀 Zero-Code Tool Generation
+
+Your OpenAPI spec is the source of truth. OMCP reads it and generates MCP tools automatically:
+
+```yaml
+# This is your entire configuration
+name: "My API"
+spec: "./openapi.json"
+base_url: "https://api.example.com"
 ```
 
-### Terminal 2: Start the OMCP Hub
-```bash
-cd examples/large_api
-uv run omcp serve -c omcp.yaml
+Every endpoint becomes a tool. Schemas become parameters. Descriptions become tool documentation.
+
+### 🔐 Multi-Tenant Ready
+
+One OMCP server handles unlimited users. Each request carries its own token:
+
+```
+User A (their JWT) ──┐
+                     ├──►  OMCP  ──►  Your API
+User B (their JWT) ──┘
 ```
 
-You'll see the custom startup UI:
-```
- ██████╗ ███╗   ███╗ ██████╗██████╗
-██╔═══██╗████╗ ████║██╔════╝██╔══██╗
-██║   ██║██╔████╔██║██║     ██████╔╝
-...
-╭─────────────── Configuration ───────────────╮
-│       API  MegaStore E-Commerce             │
-│      Mode  modular                          │
-│ Transport  http                             │
-╰─────────────────────────────────────────────╯
-╭──────────────── Modules ────────────────────╮
-│ user_management    │ http://127.0.0.1:9100  │
-│ product_catalog    │ http://127.0.0.1:9101  │
-│ order_management   │ http://127.0.0.1:9102  │
-│ ...                │                        │
-╰─────────────────────────────────────────────╯
-╭─────────── ● All Services Ready ────────────╮
-│ Hub  http://127.0.0.1:9000                  │
-╰─────────────────────────────────────────────╯
+OMCP validates and forwards. Your API handles authorization exactly as it does today. No credential storage. No session management. No changes to your auth system.
+
+```yaml
+# Dynamic auth: each user provides their own token
+auth:
+  type: jwt
+  validation:
+    enabled: true
+    jwks_url: "https://auth.example.com/.well-known/jwks.json"
 ```
 
-### Terminal 3: Run the Agent CLI
-```bash
-uv run python examples/client/agent.py
-```
+### 📈 Scales to Any API Size
 
-### Example Conversation
-```
-You: Create a user John Doe with john@example.com
+OMCP adapts to your API's complexity:
 
-Agent: User John Doe has been created with ID `abc123`.
+| API Size | Mode | How It Works |
+|----------|------|--------------|
+| Small (<30 ops) | `single` | One MCP server, all tools exposed directly |
+| Medium (30-100 ops) | `modular` | Split into domain-specific micro-MCPs |
+| Large (100+ ops) | `modular` + Hub | Micro-MCPs behind a hub with 6 meta-tools |
 
-You: Add a MacBook Pro to his cart and checkout with his address
+The hub prevents context window bloat by exposing discovery tools instead of hundreds of individual tools.
 
-Agent: I've added the MacBook Pro 16" ($3,499.99) to John's cart
-and completed checkout to his address. Order ID: `ord_456`.
-```
+### 🧠 LLM-Powered Optimization
 
-See `examples/client/prompts.md` for more example scenarios.
+OMCP uses an LLM to transform cryptic auto-generated names into agent-friendly tools:
+
+| Auto-Generated | LLM-Optimized |
+|----------------|---------------|
+| `get_widgets_widgets_get` | `list_widgets` |
+| `post_users_users_post` | `create_user` |
+| `adjust_stock_widgets__widget_id__stock_patch` | `adjust_widget_stock` |
+
+Every suggestion is validated against your actual spec. No hallucinated endpoints.
 
 ---
 
 ## Architecture
 
-### Single Mode (Small APIs)
+### Single Mode
 
-For APIs with fewer than ~30 operations:
+For smaller APIs, each operation becomes one MCP tool:
 
 ```
 ┌─────────────┐         ┌─────────────┐         ┌─────────────┐
-│  AI Agent   │  MCP    │    OMCP     │  HTTP   │  Your API   │
+│  AI Agent   │   MCP   │    OMCP     │  HTTP   │  Your API   │
 │  (Claude)   │ ──────► │   Server    │ ──────► │  (REST)     │
 └─────────────┘         └─────────────┘         └─────────────┘
 ```
 
-Each API operation becomes one MCP tool.
+### Modular Mode with Hub
 
-### Modular Mode (Large APIs)
-
-For APIs with 30-500+ operations, the hub prevents context window bloat:
+For large APIs, the hub exposes 6 meta-tools while providing access to all underlying operations:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                          AI Agent                                │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │ Sees only 6 meta-tools
-                            ▼
+│                          AI Agent                               │
+│                   (sees only 6 meta-tools)                      │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+                                ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                        OMCP Hub                                  │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │  list_modules()     find_tool()      call_tool()          │  │
-│  │  list_module_tools()  get_tool_schema()  hub_status()     │  │
-│  └───────────────────────────────────────────────────────────┘  │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │ Routes to appropriate module
-        ┌───────────────────┼───────────────────┐
-        ▼                   ▼                   ▼
-  ┌───────────┐       ┌───────────┐       ┌───────────┐
-  │   Users   │       │  Orders   │       │ Payments  │
-  │  Module   │       │  Module   │       │  Module   │
-  │ (15 tools)│       │ (20 tools)│       │ (12 tools)│
-  └─────┬─────┘       └─────┬─────┘       └─────┬─────┘
-        └───────────────────┼───────────────────┘
-                            ▼
-                    ┌─────────────┐
-                    │  Your API   │
-                    └─────────────┘
+│                          OMCP Hub                               │
+│   ┌─────────────────────────────────────────────────────────┐   │
+│   │  list_modules   find_tool      call_tool                │   │
+│   │  list_tools     get_schema     hub_status               │   │
+│   └─────────────────────────────────────────────────────────┘   │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+          ┌─────────────────────┼─────────────────────┐
+          ▼                     ▼                     ▼
+    ┌───────────┐         ┌───────────┐         ┌───────────┐
+    │   Users   │         │  Orders   │         │ Payments  │
+    │  Module   │         │  Module   │         │  Module   │
+    │ (15 tools)│         │ (20 tools)│         │ (12 tools)│
+    └───────────┘         └───────────┘         └───────────┘
+          │                     │                     │
+          └─────────────────────┼─────────────────────┘
+                                ▼
+                        ┌─────────────┐
+                        │  Your API   │
+                        └─────────────┘
 ```
 
-The agent discovers tools through `find_tool()`, gets schemas via `get_tool_schema()`, and executes via `call_tool()`. Full API access with minimal context overhead.
+**Agent workflow:**
+
+```python
+# 1. Discover what's available
+find_tool("payment")              # → Shows payment-related tools
+
+# 2. Understand parameters  
+get_tool_schema("payments",       # → Full JSON schema
+                "process_payment")
+
+# 3. Execute
+call_tool("payments",             # → Processes the payment
+          "process_payment", 
+          {"order_id": "123"})
+```
 
 ---
 
-## Real-World Performance
+## Examples
 
-Tested with a 100+ operation e-commerce API (MegaStore) split into 16 modules:
+### Demo API (Getting Started)
 
-### Agent Task Completion
+Basic example with a small API:
 
-| Task | Result | Agent Prompts Needed |
-|------|--------|---------------------|
-| List all users | Pass | 0 |
-| Create new user | Pass | 0 |
-| Check order status | Pass | 1 |
-| Process payment | Pass | 0 |
-| Issue refund | Pass | 0 |
+```bash
+# Terminal 1: Start the demo API
+uv run python examples/demo_api/start.py
 
-### Agent Performance Score (Gemini 2.0 Flash)
+# Terminal 2: OMCP serves at http://localhost:9000
+```
 
-| Metric | Score |
-|--------|-------|
-| Tool Discovery | 9/10 |
-| Problem Solving | 9/10 |
-| Autonomy | 9/10 |
-| Self-Correction | 9/10 |
-| **Overall** | **8.5/10** |
+### MegaStore (Large API + Hub)
 
-172/172 unit tests passing.
+100+ endpoint e-commerce API demonstrating modular mode with LLM planning:
+
+```bash
+# Start everything with web UI
+uv run python examples/large_api/start.py --ui
+
+# Open http://localhost:8000
+```
+
+**Features:**
+- 100+ endpoints split into ~10 domain modules
+- LLM-generated module organization
+- Hub meta-tool pattern
+- Chainlit web UI with tool visualization
+
+### Notes API (Multi-Tenant Authentication)
+
+Multi-tenant example where each user authenticates with their own JWT:
+
+```bash
+# Start with web UI
+uv run python examples/auth_api/start.py --ui
+
+# Open http://localhost:8000
+# Switch between users: Alice (admin), Bob, Charlie
+```
+
+**Features:**
+- Per-request JWT authentication
+- User isolation (each user sees only their data)
+- Role-based access control
+- Passthrough mode (OMCP forwards tokens, API validates)
 
 ---
 
-## Configuration
+## Authentication
 
-### Minimal (Single Mode)
+### Static Auth (Server-Wide)
+
+For APIs where OMCP uses a single credential:
+
+```yaml
+# Bearer token
+auth:
+  type: bearer
+  token: "${API_TOKEN}"
+
+# API key
+auth:
+  type: api_key
+  key: "${API_KEY}"
+  header_name: "X-API-Key"
+
+# OAuth2 with PKCE
+auth:
+  type: oauth2
+  client_id: "${CLIENT_ID}"
+  client_secret: "${CLIENT_SECRET}"
+  auth_url: "https://auth.example.com/authorize"
+  token_url: "https://auth.example.com/token"
+  scopes: ["read", "write"]
+```
+
+Run OAuth2 flow: `uv run omcp auth`
+
+### Dynamic Auth (Per-Request JWT)
+
+For multi-tenant scenarios where each client provides their own token:
+
+```yaml
+auth:
+  type: jwt
+  validation:
+    enabled: false  # Passthrough: your API validates
+    
+  # OR validate in OMCP first:
+  validation:
+    enabled: true
+    jwks_url: "https://auth.example.com/.well-known/jwks.json"
+    issuer: "https://auth.example.com"
+    audience: "my-api"
+```
+
+**How it works:**
+
+1. Client sends request with `Authorization: Bearer <user-token>`
+2. OMCP extracts token (optionally validates via JWKS)
+3. OMCP forwards token to your API
+4. Your API authorizes the user as it always does
+5. User gets only their data
+
+**No credential storage. No changes to your API. Just works.**
+
+---
+
+## Endpoint Filtering
+
+Control exactly which endpoints become MCP tools:
+
+```yaml
+endpoints:
+  # Exclude dangerous or internal routes
+  exclude:
+    - "DELETE *"          # All DELETE methods
+    - "* /internal/**"    # All internal routes
+    - "* /admin/**"       # All admin routes
+    - "GET /health"       # Specific endpoint
+
+  # Or whitelist specific endpoints
+  include:
+    - "GET /users/*"
+    - "POST /orders"
+```
+
+**Pattern syntax:**
+- `METHOD /path` — Specific method and path
+- `* /path` — All methods for a path
+- `METHOD *` — All paths for a method
+- `/path/**` — Path and all sub-paths
+
+Filters are applied **before** LLM processing—your exclusions are enforced absolutely.
+
+---
+
+## LLM-Powered Planning
+
+Generate optimized tool names and module organization:
+
+```bash
+# Set your LLM API key
+export GEMINI_API_KEY="your-key"
+
+# Generate optimized plan
+uv run omcp plan
+
+# Serve with optimized names
+uv run omcp serve
+```
+
+The plan is saved to `omcp.plan.json` and validated against your spec:
+- ✅ Every tool maps to a real operation
+- ✅ No hallucinated endpoints
+- ✅ Module groupings make semantic sense
+- ✅ Safety policies are enforced
+
+---
+
+## Configuration Reference
+
+### Minimal
 
 ```yaml
 name: "My API"
 spec: "./openapi.json"
 base_url: "https://api.example.com"
+
 auth:
   type: bearer
   token: "${API_TOKEN}"
 ```
 
-### Full (Modular Mode with LLM)
+### Full
 
 ```yaml
 name: "Large API"
 spec: "https://api.example.com/openapi.json"
 base_url: "https://api.example.com"
 
-mode: modular
+mode: modular  # single | modular
 
 auth:
   type: bearer
@@ -266,13 +421,12 @@ auth:
 endpoints:
   exclude:
     - "* /internal/**"
-    - "* /admin/**"
     - "DELETE *"
 
-# LLM-powered optimization
+# LLM planner
 llm:
   enabled: true
-  provider: gemini  # or: openai, anthropic
+  provider: gemini  # openai | anthropic | gemini
   model: gemini-2.0-flash
   api_key: "${GEMINI_API_KEY}"
   strategy:
@@ -285,7 +439,7 @@ llm:
 # Module configuration
 modules:
   enabled: true
-  split_strategy: llm
+  split_strategy: llm  # llm | tags | path
   runtime:
     base_port: 9100
     host: "127.0.0.1"
@@ -294,140 +448,7 @@ modules:
 hub:
   enabled: true
   port: 9000
-  transport: http
-```
-
----
-
-## LLM-Powered Planning
-
-OMCP can use an LLM to dramatically improve the agent experience:
-
-### Before/After Tool Names
-
-| Auto-Generated | LLM-Optimized |
-|----------------|---------------|
-| `get_widgets_widgets_get` | `list_widgets` |
-| `post_users_users_post` | `create_user` |
-| `adjust_stock_widgets__widget_id__stock_patch` | `adjust_widget_stock` |
-
-### Before/After Descriptions
-
-| Original | LLM-Optimized |
-|----------|---------------|
-| `"gets widgets from the database"` | `"Retrieves all widgets with optional filtering by status and category."` |
-| `"change stock level"` | `"Adjusts the stock level of a specific widget. Requires widget ID and new quantity."` |
-
-### Generate a Plan
-
-```bash
-# Set your LLM API key
-export GEMINI_API_KEY="your-key"
-
-# Generate optimized plan
-uv run omcp plan -c omcp.yaml
-
-# Plan saved to omcp.plan.json
-# Now serve with the optimized names/descriptions
-uv run omcp serve -c omcp.yaml
-```
-
----
-
-## Endpoint Filtering
-
-Control exactly which endpoints become MCP tools:
-
-```yaml
-endpoints:
-  # Whitelist approach
-  include:
-    - "GET /users"
-    - "GET /users/*"
-    - "POST /orders"
-
-  # Blacklist approach
-  exclude:
-    - "* /debug/**"       # All methods under /debug
-    - "* /internal/**"    # All internal routes
-    - "DELETE *"          # All DELETE methods
-    - "GET /health/detailed"  # Specific endpoint
-```
-
-**Pattern Syntax:**
-- `METHOD /path` - Specific method and path
-- `* /path` - All methods for a path
-- `METHOD *` - All paths for a method
-- `/path/**` - Path and all sub-paths
-- `/path/*` - Direct children only
-
-Filters are applied **before** LLM processing—your exclusions are the hard rule.
-
----
-
-## Authentication
-
-### Bearer Token
-```yaml
-auth:
-  type: bearer
-  token: "${API_TOKEN}"
-```
-
-### API Key
-```yaml
-auth:
-  type: api_key
-  key: "${API_KEY}"
-  header_name: "X-API-Key"
-```
-
-### OAuth2
-```yaml
-auth:
-  type: oauth2
-  client_id: "${CLIENT_ID}"
-  client_secret: "${CLIENT_SECRET}"
-  auth_url: "https://auth.example.com/authorize"
-  token_url: "https://auth.example.com/token"
-  scopes: ["read", "write"]
-```
-
-Run the OAuth flow:
-```bash
-uv run omcp auth -c omcp.yaml
-```
-
-### No Auth
-```yaml
-auth:
-  type: none
-```
-
----
-
-## Hub Meta-Tools Reference
-
-When using modular mode, the hub exposes these 6 tools to agents:
-
-| Tool | Purpose |
-|------|---------|
-| `list_modules()` | List all modules with descriptions and tool counts |
-| `list_module_tools(module_name)` | List tools in a specific module |
-| `find_tool(query)` | Search for tools by keyword across all modules |
-| `get_tool_schema(module_name, tool_name)` | Get full parameter schema for a tool |
-| `hub_status()` | Get hub statistics |
-| `call_tool(module_name, tool_name, arguments)` | Execute any tool in any module |
-
-### Agent Workflow
-
-```
-1. find_tool("payment")           → Discover relevant tools
-2. get_tool_schema("payments",    → Understand required parameters
-     "process_payment")
-3. call_tool("payments",          → Execute with correct arguments
-     "process_payment",
-     {"order_id": "123", "amount": 99.99})
+  transport: http  # http | sse | stdio
 ```
 
 ---
@@ -439,26 +460,41 @@ When using modular mode, the hub exposes these 6 tools to agents:
 | `omcp serve` | Run MCP server(s) |
 | `omcp plan` | Generate LLM-optimized plan |
 | `omcp list` | List operations from spec |
-| `omcp auth` | Run OAuth2 flow |
+| `omcp auth` | Run OAuth2 authorization flow |
 
 ```bash
-# Common usage
 uv run omcp serve -c config.yaml
 uv run omcp plan -c config.yaml
-uv run omcp list -c config.yaml --excluded  # Show filtered ops too
+uv run omcp list -c config.yaml --excluded
+uv run omcp list -c config.yaml --by-module
 ```
+
+---
+
+## Hub Meta-Tools Reference
+
+When using modular mode with hub enabled:
+
+| Tool | Purpose |
+|------|---------|
+| `list_modules()` | List all modules with descriptions and tool counts |
+| `list_module_tools(module)` | List tools in a specific module |
+| `find_tool(query)` | Search for tools by keyword across all modules |
+| `get_tool_schema(module, tool)` | Get full parameter schema for a tool |
+| `call_tool(module, tool, args)` | Execute any tool in any module |
+| `hub_status()` | Get hub statistics |
 
 ---
 
 ## Environment Variables
 
-Create a `.env` file:
+Reference in config with `${VAR_NAME}`:
 
 ```bash
 # API Authentication
 API_TOKEN=your-api-token
 
-# LLM Providers (for planning)
+# LLM Providers (choose one)
 GEMINI_API_KEY=your-gemini-key
 OPENAI_API_KEY=your-openai-key
 ANTHROPIC_API_KEY=your-anthropic-key
@@ -468,7 +504,27 @@ CLIENT_ID=your-client-id
 CLIENT_SECRET=your-client-secret
 ```
 
-Reference in config: `${VAR_NAME}`
+---
+
+## How It Works
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        OMCP Pipeline                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   1. Load      OpenAPI spec (file or URL)                      │
+│   2. Filter    Apply endpoint include/exclude rules            │
+│   3. Plan      LLM suggests names, modules, descriptions       │
+│   4. Validate  Check suggestions against actual spec           │
+│   5. Build     Generate FastMCP servers deterministically      │
+│   6. Serve     Run via stdio, SSE, or HTTP transport           │
+│   7. Execute   Tool calls → authenticated HTTP requests        │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key principle:** LLM suggestions are never trusted blindly. Every tool is validated against operations that actually exist in your spec.
 
 ---
 
@@ -476,62 +532,50 @@ Reference in config: `${VAR_NAME}`
 
 ```
 src/omcp/
-├── auth/           # Auth providers (bearer, api_key, oauth2)
-├── config/         # Configuration models (Pydantic)
-├── hub/            # Hub server (meta-tool pattern)
-├── modules/        # Module splitting and building
-├── planner/        # LLM-powered planning
+├── auth/           # Auth providers (bearer, api_key, oauth2, jwt)
+├── config/         # Configuration models (Pydantic v2)
+├── hub/            # Hub server and meta-tools
+├── modules/        # Module splitting and micro-MCP generation
+├── planner/        # LLM planning and validation
 ├── server/         # Single server mode
 ├── spec/           # OpenAPI parsing and normalization
 └── cli.py          # Typer CLI
 
 examples/
-├── demo_api/       # Simple test API
-├── large_api/      # 100+ operation test API
-└── messy_api/      # Filtering/LLM demo API
+├── auth_api/       # Dynamic JWT authentication demo
+├── demo_api/       # Simple getting started example
+├── large_api/      # 100+ endpoint hub demo
+└── messy_api/      # Filtering and LLM optimization demo
 ```
-
----
-
-## Roadmap
-
-See [STATUS.md](STATUS.md) for current capabilities and test results.
-
-**Planned improvements:**
-- Dynamic per-request authentication (multi-tenant support)
-- Semantic search for tool discovery
-- Response streaming for long operations
-- Multi-API hub (connect multiple different APIs)
-- Persistent conversation memory
-- Metrics and observability
-
----
-
-## How It Works
-
-1. **Load**: OMCP loads your OpenAPI spec (file or URL)
-2. **Normalize**: Spec is normalized and validated
-3. **Plan** (optional): LLM analyzes and optimizes tool names/descriptions/modules
-4. **Build**: FastMCP servers are generated from the spec
-5. **Serve**: MCP server(s) run via stdio, SSE, or HTTP transport
-6. **Execute**: Agent tool calls are translated to HTTP requests with proper auth
-
-The plan is validated deterministically—LLM suggestions are checked against the actual spec to prevent hallucinated operations.
 
 ---
 
 ## Contributing
 
 ```bash
-# Install dev dependencies
 uv sync
-
-# Run tests
 uv run pytest
-
-# Run specific test
 uv run pytest tests/test_planner.py -v
 ```
+
+181 tests passing.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+---
+
+## Roadmap
+
+- [x] OpenAPI → MCP tool generation
+- [x] Single server mode
+- [x] Modular mode with hub
+- [x] LLM-powered planning
+- [x] Static authentication (bearer, API key, OAuth2)
+- [x] Dynamic authentication (JWT passthrough)
+- [ ] Response shaping (truncation, redaction)
+- [ ] Streaming support for long operations
+- [ ] OMCP Cloud (hosted, managed credentials)
+- [ ] Semantic tool search (embeddings)
 
 ---
 
@@ -546,3 +590,6 @@ MIT
 - [Model Context Protocol](https://modelcontextprotocol.io/)
 - [FastMCP](https://github.com/jlowin/fastmcp)
 - [OpenAPI Specification](https://spec.openapis.org/oas/latest.html)
+
+---
+
