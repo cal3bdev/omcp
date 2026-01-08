@@ -583,8 +583,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
-MIT
-
+Apache‑2.0;
+No‑Hosting Source‑Available License (planned)
+When OMCP Cloud launches, server/hub/planner components will be released under
+a source‑available license that prohibits offering OMCP as a hosted/managed service
+to third parties without a commercial agreement.
 ---
 
 ## Links
